@@ -66,9 +66,11 @@ HoloMap.API.resize("explorer")
 `fit_bounds/3` accepts any shape `HoloMap.Spec.bounds/1` understands: a pair of
 corners, or a flat `[west, south, east, north]` list.
 
-`resize/1` is only needed when the container changes size without a resize event
-the browser reports, such as a CSS transition on a sidebar. MapLibre
-watches its container otherwise.
+`resize/1` is almost never needed. MapLibre observes its own container, so a map
+whose container changes size follows along by itself and this call does nothing.
+The one case where it is required is a map built with `track_resize={false}`,
+which switches that observer off; the demo's camera page has one set up that way
+so the difference is visible.
 
 ## Layers
 

@@ -14,7 +14,12 @@ defmodule Demo.CameraPage do
   ]
 
   def init(_params, component, _server) do
-    put_state(component, style: @style_url, places: @places, last: nil)
+    put_state(component,
+      style: @style_url,
+      places: @places,
+      last: nil,
+      narrow: false
+    )
   end
 
   def template do
@@ -33,14 +38,47 @@ defmodule Demo.CameraPage do
         </button>
       {/for}
       <button $click={:whole_world}>Fit world</button>
-      <button $click={:ease}>Ease north-up</button>
       <button $click={:jump}>Jump to origin</button>
-      <button $click={:resize}>Resize</button>
       <span>{@last}</span>
+    </div>
+
+    <div class="controls">
+      <button $click={:tilt}>Tilt and rotate</button>
+      <button $click={:ease}>Ease north-up</button>
+      <span>bearing and pitch</span>
     </div>
 
     <HoloMap.Map cid="camera" style={@style} center={{0.0, 20.0}} zoom={2}
                  height="480px" class="map">
+      <HoloMap.Control.Navigation visualize_pitch />
+    </HoloMap.Map>
+
+    <h2>When resize actually matters</h2>
+    <p>
+      MapLibre watches its own container, so a map that changes size follows along by itself and
+      <code>HoloMap.API.resize/1</code> has nothing to do. The one case where it does is a map
+      built with <code>track_resize={false}</code>, which switches that observer off.
+    </p>
+    <p>
+      The map below is one of those. Narrow its container and the canvas keeps its old width until
+      you ask for a resize.
+    </p>
+
+    <div class="controls">
+      <button $click={:toggle_width}>{Demo.CameraPage.width_label(@narrow)}</button>
+      <button $click={:resize}>Resize</button>
+      <span>{Demo.CameraPage.width_of(@narrow)}</span>
+    </div>
+
+    <HoloMap.Map
+      cid="stale"
+      style={@style}
+      center={{2.35, 48.86}}
+      zoom={4}
+      height="320px"
+      class={"map " <> Demo.CameraPage.width_class(@narrow)}
+      track_resize={false}
+    >
       <HoloMap.Control.Navigation />
     </HoloMap.Map>
     """
@@ -56,6 +94,11 @@ defmodule Demo.CameraPage do
     put_state(component, :last, "flew to #{params.name}")
   end
 
+  def action(:tilt, _params, component) do
+    HoloMap.API.ease_to("camera", bearing: 45, pitch: 60, duration: 900)
+    put_state(component, :last, "tilted and rotated")
+  end
+
   def action(:ease, _params, component) do
     HoloMap.API.ease_to("camera", bearing: 0, pitch: 0, duration: 900)
     put_state(component, :last, "eased back to north-up")
@@ -66,9 +109,13 @@ defmodule Demo.CameraPage do
     put_state(component, :last, "jumped to 0, 0")
   end
 
+  def action(:toggle_width, _params, component) do
+    put_state(component, :narrow, !component.state.narrow)
+  end
+
   def action(:resize, _params, component) do
-    HoloMap.API.resize("camera")
-    put_state(component, :last, "asked the map to recompute its size")
+    HoloMap.API.resize("stale")
+    component
   end
 
   def action(:whole_world, _params, component) do
@@ -76,4 +123,16 @@ defmodule Demo.CameraPage do
 
     put_state(component, :last, "fitted the world")
   end
+
+  @doc false
+  def width_label(true), do: "Widen the container"
+  def width_label(false), do: "Narrow the container"
+
+  @doc false
+  def width_of(true), do: "420px"
+  def width_of(false), do: "100%"
+
+  @doc false
+  def width_class(true), do: "w-[420px]"
+  def width_class(false), do: "w-full"
 end

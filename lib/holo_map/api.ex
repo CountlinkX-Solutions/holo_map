@@ -117,9 +117,20 @@ defmodule HoloMap.API do
   @doc """
   Recomputes the map's size after its container has been resized.
 
-  MapLibre watches its container, so this is only needed when the container
-  changes size without a resize event the browser reports, such as a CSS transition on
-  a sidebar, for instance.
+  Almost never needed. MapLibre observes its own container, so a map whose
+  container changes size follows along by itself and calling this does nothing.
+  That holds for CSS transitions, flex reflows and window resizes alike.
+
+  The one case where it is required is a map built with `track_resize={false}`,
+  which switches that observer off. The canvas then keeps its old size until
+  this is called:
+
+      <HoloMap.Map cid="panel" style={@style} width={@width} track_resize={false} />
+
+      def action(:panel_resized, _params, component) do
+        HoloMap.API.resize("panel")
+        component
+      end
   """
   @spec resize(String.t()) :: :ok
   def resize(cid), do: Runtime.call(cid, "resize", [])

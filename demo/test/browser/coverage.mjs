@@ -300,6 +300,53 @@ record("extrusion: changing the multiplier reached the live layer",
   JSON.stringify(await inspect("blocks", (map) => map.getPaintProperty("blocks-3d", "fill-extrusion-height")))
     === JSON.stringify(["*", ["get", "height"], 6]));
 
+// --- the camera page's two least obvious options -------------------------
+await page.goto(BASE + "/camera", { waitUntil: "domcontentloaded" });
+await page.waitForFunction(
+  () => window.HoloMap && window.HoloMap.map("camera") && window.HoloMap.map("stale"),
+  null,
+  { timeout: 30000 },
+);
+await page.waitForTimeout(5000);
+
+const attitude = () => inspect("camera", (map) => ({
+  bearing: Math.round(map.getBearing()), pitch: Math.round(map.getPitch()),
+}));
+
+await page.getByRole("button", { name: "Tilt and rotate" }).click();
+await page.waitForTimeout(2000);
+r = await attitude();
+record("camera: ease_to tilted and rotated the map", r.bearing === 45 && r.pitch === 60,
+  JSON.stringify(r));
+
+await page.getByRole("button", { name: "Ease north-up" }).click();
+await page.waitForTimeout(2000);
+r = await attitude();
+record("camera: ease_to brought it back to north-up", r.bearing === 0 && r.pitch === 0,
+  JSON.stringify(r));
+
+// resize/1 is a no-op unless track_resize is off, which is the whole point of
+// the second map: its canvas goes stale until the call is made.
+const staleSizes = () => page.evaluate(() => {
+  const c = document.getElementById("hm--stale");
+  return { container: c.clientWidth, canvas: c.querySelector("canvas").clientWidth };
+});
+
+await page.locator("#hm--stale").scrollIntoViewIfNeeded();
+const wide = await staleSizes();
+await page.getByRole("button", { name: "Narrow the container" }).click();
+await page.waitForTimeout(2000);
+const narrowed = await staleSizes();
+record("camera: with track_resize off the canvas goes stale",
+  narrowed.container < wide.container && narrowed.canvas === wide.canvas,
+  JSON.stringify(narrowed));
+
+await page.getByRole("button", { name: "Resize" }).click();
+await page.waitForTimeout(1500);
+const resized = await staleSizes();
+record("camera: HoloMap.API.resize brought the canvas back in line",
+  resized.canvas === resized.container, JSON.stringify(resized));
+
 // --- feature state -----------------------------------------------------------
 await open("/geojson", "cities");
 const target = await page.evaluate(() => {

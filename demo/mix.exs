@@ -101,6 +101,19 @@ defmodule Demo.MixProject do
       )
 
     if status != 0, do: Mix.raise("tailwind build failed")
+
+    gzip_file("priv/static/assets/app.css")
+  end
+
+  # Every asset with a stable filename compresses itself as it is written.
+  #
+  # Plug.Static with gzip: true prefers a sibling .gz, and unlike the Hologram
+  # bundles these filenames do not carry a content hash. So a .gz left behind by
+  # an earlier build is served for the current URL, silently, and the change you
+  # just made never reaches the browser. Keeping compression in the same step
+  # that writes the file makes the two impossible to separate.
+  defp gzip_file(path) do
+    File.write!(path <> ".gz", :zlib.gzip(File.read!(path)))
   end
 
   defp gzip_static_assets(_args) do
@@ -148,7 +161,9 @@ defmodule Demo.MixProject do
 
     if File.exists?(Path.join(dist, "maplibre-gl.css")) do
       Enum.each(copies, fn {from, to} ->
-        File.cp!(Path.join(dist, from), Path.join("priv/static/assets", to))
+        target = Path.join("priv/static/assets", to)
+        File.cp!(Path.join(dist, from), target)
+        if Path.extname(target) in [".css", ".mjs"], do: gzip_file(target)
       end)
     else
       Mix.shell().error("""

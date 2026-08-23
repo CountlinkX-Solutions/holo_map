@@ -219,7 +219,7 @@ await waitForMap("camera");
 await page.waitForTimeout(1500);
 await page.getByRole("button", { name: "Kyoto" }).click();
 await page.waitForTimeout(3000);
-const flew = await page.locator(".controls span").innerText();
+const flew = await page.locator(".controls span").first().innerText();
 record("camera: fly_to ran and the action updated state", flew.includes("Kyoto"), flew);
 
 // --- teardown: navigating away must dispose the WebGL context ---------------
