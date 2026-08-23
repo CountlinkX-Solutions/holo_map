@@ -119,6 +119,79 @@ Or, if your application has a CSS pipeline, import it there instead:
 @import "maplibre-gl/dist/maplibre-gl.css";
 ```
 
+## Serving the bundles
+
+MapLibre is a big library, and Hologram builds **one bundle per page**. A page
+that uses `HoloMap` therefore carries its own copy — around 1 MB minified — and
+five such pages are five distinct 1 MB downloads, not one cached download reused
+five times. That is inherent to Hologram's page-bundle model, not something this
+library can avoid.
+
+What it does mean is that the three settings below matter more here than in a
+typical Phoenix application. In this demo they take a six-page tour from
+**8.5 MB to 2.8 MB**.
+
+### Compress the bundles
+
+Bandit and Cowboy both compress responses on the fly, but `Plug.Static` answers
+with `send_file/3` and a sendfile cannot be compressed in flight. So a 1.06 MB
+bundle goes out at 1.06 MB rather than the 0.26 MB it gzips to — a 4× cost that
+is easy to miss, because HTML responses from the same server *are* compressed.
+
+Pre-compress after every build and set `gzip: true`:
+
+```elixir
+defp gzip_static_assets(_args) do
+  for path <- Path.wildcard("priv/static/hologram/*.{js,map}") do
+    File.write!(path <> ".gz", :zlib.gzip(File.read!(path)))
+  end
+end
+```
+
+It has to run *after* the Hologram compiler, which rewrites
+`priv/static/hologram` on every build.
+
+### Cache them forever
+
+Hologram names every bundle by content hash, so the bytes behind a given URL
+never change. `Plug.Static`'s default is `cache-control: public` with no
+`max-age`, which makes the browser revalidate on every navigation — cheap when
+it answers 304, and a full re-download whenever a proxy or a devtools
+"Disable cache" tick removes that conditional.
+
+Give the bundles their own `Plug.Static` so the policy does not leak onto
+unhashed filenames in `/assets`:
+
+```elixir
+plug Plug.Static,
+  at: "/hologram",
+  from: {:my_app, "priv/static/hologram"},
+  gzip: true,
+  cache_control_for_etags: "public, max-age=31536000, immutable"
+```
+
+### Do not serve sourcemaps in production
+
+esbuild writes a sourcemap beside every bundle, and they are about five times
+the size of the code — 28 MB across this demo. Only a browser with devtools open
+requests one, so they cost nothing in normal use and everything the moment
+someone opens the network tab. Keep them in development, refuse them elsewhere:
+
+```elixir
+plug :reject_sourcemaps
+
+defp reject_sourcemaps(conn, _opts) do
+  if String.ends_with?(conn.request_path, ".map") and
+       not Application.get_env(:my_app, :serve_sourcemaps, false) do
+    conn |> send_resp(404, "") |> halt()
+  else
+    conn
+  end
+end
+```
+
+`demo/lib/demo_web/endpoint.ex` has all three wired up if you want a reference.
+
 ## Umbrella projects
 
 npm packages live in an `assets` directory at the **umbrella root**, and are

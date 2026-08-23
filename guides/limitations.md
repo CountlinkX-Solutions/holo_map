@@ -77,6 +77,18 @@ them in declared order.
 
 It works, and it is not free. Put frequently-changing data in `data`.
 
+## MapLibre is bundled once per page
+
+Hologram builds one JavaScript bundle per page, and a page that uses `HoloMap`
+carries its own copy of MapLibre — around 1 MB minified, 0.26 MB gzipped. Five
+map pages are five distinct downloads.
+
+This is Hologram's bundling model, not something the library can change. It is
+also not as bad as it sounds: a visitor only downloads the pages they actually
+visit, and each is content-hash named and so cacheable forever. But it does make
+compression and cache headers matter more than usual — see
+[Installation](installation.html#serving-the-bundles).
+
 ## No `HoloMap` styling of its own
 
 The library ships no CSS. MapLibre's own stylesheet is a required install step,

@@ -15,6 +15,10 @@ config :demo, DemoWeb.Endpoint,
   secret_key_base: "demo_only_secret_key_base_at_least_64_bytes_long_0000000000000000000",
   server: true
 
+# Hologram's client stacktraces are built on them, so they are worth their
+# weight while developing.
+config :demo, serve_sourcemaps: true
+
 config :logger, :console, format: "[$level] $message\n"
 config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime

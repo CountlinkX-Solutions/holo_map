@@ -25,3 +25,6 @@ node_modules/
 
 # Screenshots the browser tests write.
 **/test/browser/*.png
+
+# Pre-compressed static assets.
+*.gz

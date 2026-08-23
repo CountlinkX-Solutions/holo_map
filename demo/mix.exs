@@ -36,7 +36,10 @@ defmodule Demo.MixProject do
       # owns are two stylesheets, one of which npm put in node_modules during
       # compilation — so this runs after compile, not before.
       "assets.copy": &copy_static_assets/1,
-      server: ["assets.install", "compile", "assets.copy", "holo"]
+      server: ["assets.install", "compile", "assets.copy", "assets.gzip", "holo"],
+      # Pre-compression has to run after the Hologram compiler, which rewrites
+      # priv/static/hologram on every build.
+      "assets.gzip": &gzip_static_assets/1
     ]
   end
 
@@ -46,6 +49,24 @@ defmodule Demo.MixProject do
     if status != 0 do
       Mix.raise("npm install failed in assets/")
     end
+  end
+
+  defp gzip_static_assets(_args) do
+    paths =
+      Path.wildcard("priv/static/hologram/*.{js,map}") ++
+        Path.wildcard("priv/static/assets/*.{js,css,mjs}")
+
+    saved =
+      Enum.reduce(paths, 0, fn path, acc ->
+        raw = File.read!(path)
+        compressed = :zlib.gzip(raw)
+        File.write!(path <> ".gz", compressed)
+        acc + byte_size(raw) - byte_size(compressed)
+      end)
+
+    Mix.shell().info(
+      "gzipped #{length(paths)} files, saving #{div(saved, 1024)} KB over the wire"
+    )
   end
 
   defp copy_static_assets(_args) do
