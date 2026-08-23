@@ -2,7 +2,7 @@ defmodule HoloMap.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/roger120981/holo_map"
+  @source_url "https://github.com/CountlinkX-Solutions/holo_map"
   @maplibre_version "6.5.0"
 
   def project do
