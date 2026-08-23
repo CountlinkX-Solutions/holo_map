@@ -2,7 +2,7 @@ defmodule Demo.ExtrusionPage do
   use Hologram.Page
 
   route "/extrusion"
-  layout Demo.MainLayout, page_title: "3D extrusion — HoloMap"
+  layout Demo.MainLayout, page_title: "3D extrusion - HoloMap", active: :extrusion
 
   # The basemap MapLibre's own "Display buildings in 3D" example uses: a free,
   # keyless vector style whose `openmaptiles` source carries a `building` layer
@@ -33,7 +33,7 @@ defmodule Demo.ExtrusionPage do
     <h1>3D extrusion</h1>
     <p>
       <code>HoloMap.Layer.FillExtrusion</code> raises polygons by a data-driven height. There
-      are two ways to feed it, and both are here — the second map is a separate
+      are two ways to feed it, and both are here. The second map is a separate
       <code>HoloMap.Map</code> on the same page, which is all it takes to run two.
     </p>
 
@@ -100,7 +100,7 @@ defmodule Demo.ExtrusionPage do
     <h2>Geometry your application owns</h2>
     <p>
       Here the polygons are built in Elixir and handed over as a
-      <code>HoloMap.Source.GeoJSON</code> — the usual case for indoor plans, zoning envelopes or
+      <code>HoloMap.Source.GeoJSON</code>. That is the usual case for indoor plans, zoning envelopes or
       planned volumes, where the heights are whatever your application decides they are.
       Changing the multiplier rewrites the <code>fill-extrusion-height</code> expression and
       reaches MapLibre as <code>setPaintProperty</code>; nothing is rebuilt.

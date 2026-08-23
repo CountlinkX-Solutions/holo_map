@@ -2,7 +2,7 @@ defmodule Demo.TerrainPage do
   use Hologram.Page
 
   route "/terrain"
-  layout Demo.MainLayout, page_title: "Terrain, hillshade and sky — HoloMap"
+  layout Demo.MainLayout, page_title: "Terrain, hillshade and sky - HoloMap", active: :terrain
 
   # The elevation source MapLibre's own "Sky, Fog, Terrain" example uses.
   # Global coverage, terrarium-encoded.
@@ -29,7 +29,7 @@ defmodule Demo.TerrainPage do
       atmosphere at the horizon.
     </p>
     <p>
-      Terrain does nothing at zero pitch — a hill seen from directly above still looks flat —
+      Terrain does nothing at zero pitch, because a hill seen from directly above still looks flat,
       and the sky is only drawn where the horizon is on screen. Flatten the view below and both
       disappear, which is correct rather than broken.
     </p>
@@ -92,7 +92,7 @@ defmodule Demo.TerrainPage do
     <h2>Letting the user decide instead</h2>
     <p>
       The map above declares terrain: while <code>HoloMap.Terrain</code> is rendered, terrain is
-      on, and the application decides. <code>HoloMap.Control.Terrain</code> is the opposite — it
+      on, and the application decides. <code>HoloMap.Control.Terrain</code> is the opposite: it
       starts flat and hands the decision to the user as a button. Rendering both would put them
       in conflict, so this is a separate map.
     </p>

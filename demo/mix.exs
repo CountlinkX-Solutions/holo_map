@@ -27,7 +27,14 @@ defmodule Demo.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "assets.install", "assets.build", "assets.copy", "assets.gzip"],
+      setup: [
+        "deps.get",
+        "assets.install",
+        "assets.build",
+        "assets.copy",
+        "assets.css",
+        "assets.gzip"
+      ],
       # Hologram npm-installs its own assets/package.json, never the host
       # application's — it only puts assets/node_modules on esbuild's NODE_PATH.
       # Installing maplibre-gl is therefore this app's job.
@@ -36,12 +43,20 @@ defmodule Demo.MixProject do
       # owns are two stylesheets, one of which npm put in node_modules during
       # compilation — so this runs after compile, not before.
       "assets.copy": &copy_static_assets/1,
+      "assets.css": &build_css/1,
       # `mix holo` starts the server and never returns, so everything that has to
       # touch the bundles must run before it — and the bundles only exist after a
       # compile with the Hologram compiler enabled, which `assets.build` forces.
       # Ordering gzip before that step compresses the *previous* build and leaves
       # the new one uncompressed.
-      server: ["assets.install", "assets.build", "assets.copy", "assets.gzip", "holo"],
+      server: [
+        "assets.install",
+        "assets.build",
+        "assets.copy",
+        "assets.css",
+        "assets.gzip",
+        "holo"
+      ],
       "assets.build": &build_bundles/1,
       # Pre-compression has to run after the Hologram compiler, which rewrites
       # priv/static/hologram on every build.
@@ -63,6 +78,29 @@ defmodule Demo.MixProject do
     if status != 0 do
       Mix.raise("npm install failed in assets/")
     end
+  end
+
+  defp build_css(_args) do
+    File.mkdir_p!("priv/static/assets/fonts")
+
+    for {from, to} <- [
+          {"assets/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2",
+           "priv/static/assets/fonts/geist.woff2"},
+          {"assets/node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+           "priv/static/assets/fonts/geist-mono.woff2"}
+        ] do
+      File.cp!(from, to)
+    end
+
+    {_output, status} =
+      System.cmd(
+        Path.expand("assets/node_modules/.bin/tailwindcss"),
+        ["-i", "app.css", "-o", "../priv/static/assets/app.css", "--minify"],
+        cd: "assets",
+        into: IO.stream()
+      )
+
+    if status != 0, do: Mix.raise("tailwind build failed")
   end
 
   defp gzip_static_assets(_args) do
@@ -92,7 +130,6 @@ defmodule Demo.MixProject do
 
   defp copy_static_assets(_args) do
     File.mkdir_p!("priv/static/assets")
-    File.cp!("assets/demo.css", "priv/static/assets/demo.css")
 
     dist = "assets/node_modules/maplibre-gl/dist"
 

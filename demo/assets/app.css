@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* Hologram templates live in .ex files; Tailwind v4 scans them for utilities
+   just as it would JSX, provided the directory is declared. */
+@source "../app";
+
+/* Self-hosted, no Google Fonts link. Variable weights, latin subset only. */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/assets/fonts/geist.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/assets/fonts/geist-mono.woff2") format("woff2-variations");
+}
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* One accent, locked for the whole site. Amber sits apart from every colour
+     the maps themselves draw with (blue, red, pink, teal), so chrome and data
+     never read as the same signal. */
+  --color-accent-50: oklch(0.987 0.022 95.277);
+  --color-accent-400: oklch(0.828 0.189 84.429);
+  --color-accent-500: oklch(0.769 0.188 70.08);
+  --color-accent-600: oklch(0.666 0.179 58.318);
+  --color-accent-700: oklch(0.555 0.163 48.998);
+}
+
+/* Eleven pages share one structure: a heading, a short lede, a row of controls,
+   a map. Styling that structure once keeps every page consistent and leaves the
+   class hooks the browser suite selects on (.controls, .map, .chip, .log)
+   exactly where they were. */
+
+.page h1 {
+  @apply text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50;
+}
+
+.page h2 {
+  @apply mt-14 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100;
+}
+
+.page > p {
+  @apply mt-4 max-w-[68ch] text-[15px] leading-7 text-zinc-600 dark:text-zinc-400;
+}
+
+.page h1 + p {
+  @apply mt-3 text-base leading-7 text-zinc-600 dark:text-zinc-400;
+}
+
+.page code {
+  @apply rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[13px] text-zinc-700
+         dark:bg-zinc-900 dark:text-zinc-300;
+}
+
+.page a:not(.maplibregl-map a) {
+  @apply text-accent-700 underline decoration-accent-700/30 underline-offset-2
+         transition-colors hover:decoration-accent-700 dark:text-accent-400
+         dark:decoration-accent-400/30 dark:hover:decoration-accent-400;
+}
+
+/* Controls sit directly above their map, reading as one unit with it. */
+.controls {
+  @apply mt-8 flex flex-wrap items-center gap-2;
+}
+
+.controls button {
+  @apply rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium
+         text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50
+         active:translate-y-px dark:border-zinc-800 dark:bg-zinc-900
+         dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800;
+}
+
+.controls span {
+  @apply ml-1 font-mono text-[13px] tabular-nums text-zinc-600 dark:text-zinc-400;
+}
+
+/* Radius scale, applied consistently: containers xl, interactive controls lg,
+   map overlays full. */
+.map {
+  @apply mt-4 overflow-hidden rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800;
+}
+
+.controls + .map {
+  @apply mt-3;
+}
+
+.log {
+  @apply mt-4 space-y-1 font-mono text-[13px] text-zinc-600 dark:text-zinc-400;
+}
+
+.index {
+  @apply mt-6 space-y-4;
+}
+
+.index li {
+  @apply max-w-[68ch] text-[15px] leading-7 text-zinc-600 dark:text-zinc-400;
+}
+
+.index a {
+  @apply font-medium no-underline;
+}
+
+/* Marker slot content. Cloned into MapLibre's overlay, so it carries its own
+   look rather than inheriting the page's. */
+.chip {
+  @apply cursor-pointer whitespace-nowrap rounded-full border border-zinc-200
+         bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm;
+}
+
+/* MapLibre renders its own markup inside .map, including popup content and the
+   attribution link. None of the page prose rules above should reach it. */
+.maplibregl-map a {
+  @apply text-inherit no-underline;
+}
+
+.maplibregl-map h3 {
+  @apply m-0 text-sm font-semibold text-zinc-900;
+}
+
+.maplibregl-map p {
+  @apply m-0 mt-1 text-xs leading-relaxed text-zinc-600;
+}
+
+/* MapLibre ships its own control chrome. These few overrides align its radii
+   and shadow with the surrounding page rather than restyling it wholesale. */
+.maplibregl-ctrl-group {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 0.5rem !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -121,7 +121,7 @@ Those run from the repository root. The demo is its own Mix project in `demo/`, 
 `cd demo && mix setup && mix server` works too — the root aliases just save the `cd`.
 
 Its browser test suite lives in `demo/test/browser/` and drives a real MapLibre instance through
-Playwright — see the README there for what it covers and why.
+Playwright. See the README there for what it covers and why.
 
 ## Licence
 

@@ -2,7 +2,7 @@ defmodule Demo.ClusteringPage do
   use Hologram.Page
 
   route "/clustering"
-  layout Demo.MainLayout, page_title: "Clustering — HoloMap"
+  layout Demo.MainLayout, page_title: "Clustering - HoloMap", active: :clustering
 
   @style_url "https://demotiles.maplibre.org/style.json"
 
@@ -21,7 +21,7 @@ defmodule Demo.ClusteringPage do
       A clustered source emits two kinds of feature, so it wants two layers: one filtered
       to <code>["has", "point_count"]</code> and one to its negation. Changing the cluster
       radius is a structural change to the source, so the reconciler detaches these layers,
-      rebuilds the source and puts them back — watch them survive it.
+      rebuilds the source and puts them back. Watch them survive it.
     </p>
 
     <div class="controls">

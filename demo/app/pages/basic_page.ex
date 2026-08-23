@@ -2,10 +2,10 @@ defmodule Demo.BasicPage do
   use Hologram.Page
 
   route "/basic"
-  layout Demo.MainLayout, page_title: "Basic map — HoloMap"
+  layout Demo.MainLayout, page_title: "Basic map - HoloMap", active: :basic
 
   # In a HOLO template `@style` resolves to a prop or state entry, never to a
-  # module attribute — so the style URL goes into state like any other value.
+  # module attribute, so the style URL goes into state like any other value.
   @style_url "https://demotiles.maplibre.org/style.json"
 
   def init(_params, component, _server) do
@@ -17,7 +17,7 @@ defmodule Demo.BasicPage do
     <h1>Basic map</h1>
     <p>
       The camera below is component state. The buttons write to that state, and the map
-      follows — no imperative call anywhere on this page.
+      follows. There is no imperative call anywhere on this page.
     </p>
 
     <div class="controls">
@@ -66,7 +66,7 @@ defmodule Demo.BasicPage do
   def action(:camera_moved, params, component) do
     [lng, lat] = params.center
     # MapLibre reports a whole-number coordinate as an integer, and Float.round/2
-    # only accepts floats — so the payload is widened before rounding.
+    # only accepts floats, so the payload is widened before rounding.
     entry =
       "moveend · #{Float.round(lng * 1.0, 3)}, #{Float.round(lat * 1.0, 3)}" <>
         " @ z#{Float.round(params.zoom * 1.0, 2)}"

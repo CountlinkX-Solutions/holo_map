@@ -2,7 +2,7 @@ defmodule Demo.VectorPage do
   use Hologram.Page
 
   route "/vector"
-  layout Demo.MainLayout, page_title: "Vector tiles — HoloMap"
+  layout Demo.MainLayout, page_title: "Vector tiles - HoloMap", active: :vector
 
   # MapLibre's own demo tileset. Its vector tiles carry three source layers:
   # countries, centroids and geolines.
@@ -23,7 +23,7 @@ defmodule Demo.VectorPage do
     <h1>Vector tiles</h1>
     <p>
       A <code>HoloMap.Source.Vector</code> feeding a fill and a line layer. Layers on a vector
-      source must name a <code>source_layer</code> — a vector tile carries several, and MapLibre
+      source must name a <code>source_layer</code>. A vector tile carries several, and MapLibre
       cannot guess which one is meant.
     </p>
     <p>
@@ -33,7 +33,7 @@ defmodule Demo.VectorPage do
     </p>
     <p>
       The globe button switches the projection. Mercator inflates everything far from the
-      equator, which is the wrong story for a world view — press it and the distortion goes.
+      equator, which is the wrong story for a world view. Press it and the distortion goes.
     </p>
 
     <div class="controls">
@@ -45,7 +45,7 @@ defmodule Demo.VectorPage do
 
     <p>
       The row below reaches MapLibre directly through <code>HoloMap.API</code>. Nothing it does
-      survives the next declarative change — press a colour button afterwards and the imperative
+      survives the next declarative change. Press a colour button afterwards and the imperative
       paint is gone, because the reconciler treats the rendered props as the truth.
     </p>
 

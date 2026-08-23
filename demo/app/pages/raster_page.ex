@@ -2,14 +2,14 @@ defmodule Demo.RasterPage do
   use Hologram.Page
 
   route "/raster"
-  layout Demo.MainLayout, page_title: "Raster and image sources — HoloMap"
+  layout Demo.MainLayout, page_title: "Raster and image sources - HoloMap", active: :raster
 
   # Both taken from MapLibre's own examples: OpenStreetMap's tile server, and
   # the radar frames used by "Animate a series of images".
   @osm_tiles ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]
   # A literal count, not `Enum.count(0..4)`: Hologram ships a protocol
   # implementation to the browser only for types its compiler can see, and
-  # Enumerable.Range is not among them — the range works on the server and
+  # Enumerable.Range is not among them. The range works on the server and
   # raises UndefinedFunctionError on the client.
   @radar_frame_count 5
   @radar_corners [
@@ -37,7 +37,7 @@ defmodule Demo.RasterPage do
       A <code>HoloMap.Source.Raster</code> serving OpenStreetMap tiles, with a
       <code>HoloMap.Source.Image</code> pinned over the north-eastern United States on top.
       Stepping through the radar frames changes the image source's <code>url</code>, which
-      MapLibre applies with <code>updateImage</code> — no source is rebuilt and the layer above
+      MapLibre applies with <code>updateImage</code>. No source is rebuilt and the layer above
       it is never disturbed.
     </p>
 

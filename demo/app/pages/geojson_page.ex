@@ -2,7 +2,7 @@ defmodule Demo.GeoJSONPage do
   use Hologram.Page
 
   route "/geojson"
-  layout Demo.MainLayout, page_title: "GeoJSON layers — HoloMap"
+  layout Demo.MainLayout, page_title: "GeoJSON layers - HoloMap", active: :geojson
 
   @style_url "https://demotiles.maplibre.org/style.json"
 
@@ -32,7 +32,7 @@ defmodule Demo.GeoJSONPage do
     <h1>GeoJSON layers</h1>
     <p>
       One <code>HoloMap.Source.GeoJSON</code> feeding a circle layer and a label layer.
-      The colour and the filter below are component state — changing them updates the
+      The colour and the filter below are component state. Changing them updates the
       existing layer through <code>setPaintProperty</code> and <code>setFilter</code>
       rather than rebuilding anything.
     </p>
@@ -123,7 +123,7 @@ defmodule Demo.GeoJSONPage do
   end
 
   # Feature state is the mechanism behind hover styling, and it belongs to a
-  # feature rather than to a component — so it has no declarative equivalent.
+  # feature rather than to a component, so it has no declarative equivalent.
   def action(:city_hovered, params, component) do
     case params.features do
       [%{id: id} | _rest] when not is_nil(id) ->

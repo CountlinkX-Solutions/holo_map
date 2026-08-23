@@ -2,7 +2,7 @@ defmodule Demo.MarkersPage do
   use Hologram.Page
 
   route "/markers"
-  layout Demo.MainLayout, page_title: "Markers and popups — HoloMap"
+  layout Demo.MainLayout, page_title: "Markers and popups - HoloMap", active: :markers
 
   @style_url "https://demotiles.maplibre.org/style.json"
 
@@ -79,7 +79,7 @@ defmodule Demo.MarkersPage do
         >
           <h3>{@selected.name}</h3>
           <p>
-            Rendered from page state. Closing it — with the button, or by clicking the map —
+            Rendered from page state. Closing it, with the button or by clicking the map,
             reports back through <code>on_close</code>, which clears that state so the
             declaration and the screen agree again.
           </p>
@@ -94,7 +94,7 @@ defmodule Demo.MarkersPage do
       GPU.
     </p>
     <p>
-      That needs an icon, and <code>icon_image</code> names an image rather than fetching one —
+      That needs an icon, and <code>icon_image</code> names an image rather than fetching one.
       the name has to exist in the style's sprite or be registered first. This style ships no
       sprite at all, so <code>HoloMap.Image</code> is the only thing making the icon below
       resolvable. Remove it and the layer draws nothing, silently.

@@ -2,7 +2,7 @@ defmodule Demo.HeatmapPage do
   use Hologram.Page
 
   route "/heatmap"
-  layout Demo.MainLayout, page_title: "Heatmap — HoloMap"
+  layout Demo.MainLayout, page_title: "Heatmap - HoloMap", active: :heatmap
 
   # The earthquake feed MapLibre's own heatmap example uses: 6,107 points.
   @earthquakes "https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson"
@@ -19,7 +19,7 @@ defmodule Demo.HeatmapPage do
     ~HOLO"""
     <h1>Heatmap</h1>
     <p>
-      Six thousand earthquakes, fetched by URL rather than inlined — a
+      Six thousand earthquakes, fetched by URL rather than inlined. A
       <code>HoloMap.Source.GeoJSON</code>'s <code>data</code> prop takes either. The heatmap
       fades out as you zoom in and individual circles fade in, which is two layers with
       opposing zoom-driven opacity rather than any switching logic.

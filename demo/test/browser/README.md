@@ -53,6 +53,12 @@ GeoJSON source and its layers reaching MapLibre; a paint change arriving as
 clustered source surviving a structural rebuild with its three layers re-added;
 `HoloMap.API.fly_to/2`; and teardown releasing the WebGL context.
 
+`accessibility.mjs` — every page in both colour schemes, audited with axe-core
+against WCAG 2 A and AA. Contrast is the reason this is a tool and not a
+calculation: Tailwind v4 emits `oklch()`, which a hand-written luminance
+formula parses into nonsense. Two hand-rolled attempts here produced
+contradictory numbers before axe-core gave the real answer.
+
 `navigation.mjs` — thirteen page transitions in a row, asserting zero
 uncaught errors and exactly one live map and one canvas at the end.
 

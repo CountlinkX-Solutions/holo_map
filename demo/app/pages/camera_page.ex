@@ -2,7 +2,7 @@ defmodule Demo.CameraPage do
   use Hologram.Page
 
   route "/camera"
-  layout Demo.MainLayout, page_title: "Camera API — HoloMap"
+  layout Demo.MainLayout, page_title: "Camera API - HoloMap", active: :camera
 
   @style_url "https://demotiles.maplibre.org/style.json"
 
@@ -21,7 +21,7 @@ defmodule Demo.CameraPage do
     ~HOLO"""
     <h1>Camera API</h1>
     <p>
-      Flying somewhere is an event, not a value — re-rendering the same centre twice
+      Flying somewhere is an event, not a value. Re-rendering the same centre twice
       should not re-animate. That is what <code>HoloMap.API</code> is for, and it is
       called from an ordinary action.
     </p>
