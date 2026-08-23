@@ -138,6 +138,13 @@ def action(:pin_moved, params, component) do
 end
 ```
 
+`on_drag` fires on every pointer move, and writing the position back into state
+from it is safe: the value going back is the one MapLibre just reported, so the
+`setLngLat` the reconciler performs is a no-op and the marker stays locked to
+the cursor. Prefer `on_drag_end` when only the final position matters — there is
+no reason to re-render on every frame for a value nothing reads until the drag
+ends.
+
 ## Hover styling
 
 The usual pattern needs feature ids, which GeoJSON features often lack. Set

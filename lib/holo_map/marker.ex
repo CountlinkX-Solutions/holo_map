@@ -56,6 +56,25 @@ defmodule HoloMap.Marker do
         put_state(component, coords: {lng, lat})
       end
 
+  ### Dragging
+
+  Set `draggable` and the user can move the marker. `on_drag_start` fires once,
+  `on_drag` on every pointer move, `on_drag_end` once at the finish.
+
+  Writing the position back into state from `on_drag` is safe, and is the usual
+  way to keep a coordinate readout live. It looks like it should not be: each
+  event is a state update, a re-render, and a `setLngLat` back into the marker
+  MapLibre is in the middle of dragging. It works because the value going back
+  is the one MapLibre just reported, so the write is a no-op — the marker stays
+  locked to the cursor, measured at zero pixels of drift.
+
+      <HoloMap.Marker id="pin" lng_lat={@pin} draggable
+                      on_drag={:pin_moved} on_drag_end={:pin_settled} />
+
+  Use `on_drag_end` alone when only the final position matters; there is no
+  reason to re-render on every frame for a value nothing reads until the drag
+  is over.
+
   > #### Slot content is cloned {: .warning}
   >
   > MapLibre moves a marker's element into its own overlay container. Handing

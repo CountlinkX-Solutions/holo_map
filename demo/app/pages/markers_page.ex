@@ -16,6 +16,8 @@ defmodule Demo.MarkersPage do
       style: @style_url,
       selected: nil,
       pin: [-69.93, 18.48],
+      drag_events: 0,
+      drag_phase: "idle",
       icon: @icon,
       places: places(),
       icon_size: 0.5
@@ -31,7 +33,7 @@ defmodule Demo.MarkersPage do
     </p>
 
     <div class="controls">
-      <span>draggable pin: {Demo.MarkersPage.format(@pin)}</span>
+      <span>draggable pin: {Demo.MarkersPage.format(@pin)} · {@drag_phase} · {@drag_events} drag events</span>
       <button $click={:clear}>Clear popup</button>
     </div>
 
@@ -63,6 +65,8 @@ defmodule Demo.MarkersPage do
         lng_lat={@pin}
         color="#059669"
         draggable
+        on_drag_start={:pin_drag_started}
+        on_drag={:pin_dragging}
         on_drag_end={:pin_moved}
       />
 
@@ -140,8 +144,22 @@ defmodule Demo.MarkersPage do
     put_state(component, :selected, %{name: params.name, coords: coords})
   end
 
+  def action(:pin_drag_started, _params, component) do
+    put_state(component, drag_phase: "dragging", drag_events: 0)
+  end
+
+  # Writing the position back on every frame is the demanding case: each one is
+  # a state update, a re-render, and a setLngLat back into the marker MapLibre
+  # is currently dragging.
+  def action(:pin_dragging, params, component) do
+    put_state(component,
+      pin: params.lng_lat,
+      drag_events: component.state.drag_events + 1
+    )
+  end
+
   def action(:pin_moved, params, component) do
-    put_state(component, :pin, params.lng_lat)
+    put_state(component, pin: params.lng_lat, drag_phase: "idle")
   end
 
   def action(:clear, _params, component) do

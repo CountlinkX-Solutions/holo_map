@@ -123,6 +123,40 @@ await step("markers: clicking a marker opened a state-driven popup", async () =>
 });
 
 
+// Dragging, with all three handlers live and on_drag writing the position back
+// into state on every frame — which means a re-render and a setLngLat back into
+// the marker MapLibre is currently dragging. The gap between marker and cursor
+// is what would show that fight.
+const dragStart = await page.evaluate(() => {
+  const rect = document.querySelector(".maplibregl-marker-draggable").getBoundingClientRect();
+  return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) };
+});
+
+await page.mouse.move(dragStart.x, dragStart.y);
+await page.mouse.down();
+
+const dragGaps = [];
+for (let i = 1; i <= 10; i++) {
+  const cx = dragStart.x + i * 12;
+  const cy = dragStart.y + i * 5;
+  await page.mouse.move(cx, cy);
+  await page.waitForTimeout(70);
+  const rect = await page.evaluate(() =>
+    document.querySelector(".maplibregl-marker-draggable").getBoundingClientRect());
+  dragGaps.push(Math.round(Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy)));
+}
+
+await page.mouse.up();
+await page.waitForTimeout(1500);
+
+const dragText = await page.locator(".controls span").first().innerText();
+record("markers: on_drag fired on every move", /[1-9]\d* drag events/.test(dragText), dragText);
+record("markers: on_drag_start and on_drag_end bracketed it", dragText.includes("idle"), dragText);
+record("markers: the marker tracked the cursor exactly while state was rewritten",
+  Math.max(...dragGaps) === 0, `max gap ${Math.max(...dragGaps)}px`);
+record("markers: the dragged position reached component state",
+  !dragText.includes("-69.93, 18.48"), dragText);
+
 // --- clustering: a structural source change survives ------------------------
 await page.goto(`${BASE}/clustering`, { waitUntil: "domcontentloaded" });
 await waitForMap("clusters");
