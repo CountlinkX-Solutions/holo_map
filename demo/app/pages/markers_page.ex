@@ -71,9 +71,18 @@ defmodule Demo.MarkersPage do
       />
 
       {%if @selected}
-        <HoloMap.Popup id="details" lng_lat={@selected.coords} close_on_move={false}>
+        <HoloMap.Popup
+          id="details"
+          lng_lat={@selected.coords}
+          close_on_move={false}
+          on_close={:clear}
+        >
           <h3>{@selected.name}</h3>
-          <p>Rendered from page state — closing it means clearing that state.</p>
+          <p>
+            Rendered from page state. Closing it — with the button, or by clicking the map —
+            reports back through <code>on_close</code>, which clears that state so the
+            declaration and the screen agree again.
+          </p>
         </HoloMap.Popup>
       {/if}
     </HoloMap.Map>

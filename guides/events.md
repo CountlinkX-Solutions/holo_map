@@ -123,6 +123,22 @@ end
 space when the event is bound to the map rather than a layer. Match on it rather
 than assuming a head.
 
+### Popup events
+
+`on_open`, `on_close`. Neither carries a payload.
+
+`on_close` fires for every close, including the ones MapLibre performs without
+asking: the close button, a click on the map (`close_on_click` is on by
+default) and a camera move. Handle it by clearing whatever state opened the
+popup — otherwise the component still believes the popup is open, and clicking
+the same feature again re-renders nothing.
+
+```elixir
+def action(:selection_cleared, _params, component) do
+  put_state(component, :selected, nil)
+end
+```
+
 ### Marker events
 
 `on_click`, `on_drag_start`, `on_drag`, `on_drag_end`.

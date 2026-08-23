@@ -47,11 +47,39 @@ defmodule HoloMap.Popup do
 
   ## Closing with the built-in button
 
-  `close_button` is MapLibre's own control: it removes the popup from the DOM
-  without telling Hologram, so the component that rendered it still thinks it
-  is open and the next re-render brings it back. Either leave `close_button`
-  off and close through your own state, or pair it with an `on_click` handler
-  on the map that clears that state.
+  MapLibre closes a popup on its own for three reasons: the close button, a
+  click on the map (`close_on_click`, on by default) and a camera move
+  (`close_on_move`). None of them go through your state, so without help the
+  component that rendered the popup still believes it is open — and clicking the
+  same thing again changes nothing, re-renders nothing, and the popup never
+  comes back.
+
+  `on_close` is what closes that gap. Handle it by clearing whatever state
+  opened the popup, and the declaration matches reality again:
+
+      {%if @selected}
+        <HoloMap.Popup id="details" lng_lat={@selected.coords} on_close={:selection_cleared}>
+          <h3>{@selected.name}</h3>
+        </HoloMap.Popup>
+      {/if}
+
+      def action(:selection_cleared, _params, component) do
+        put_state(component, :selected, nil)
+      end
+
+  If you would rather not handle it, set `close_button={false}` and
+  `close_on_click={false}` so the only way to close the popup is through your
+  own state.
+
+  A changed declaration always re-asserts itself: if the props change while
+  MapLibre has the popup closed, it reopens. Selecting a different feature
+  therefore works whether or not the previous popup was dismissed.
+
+  ## Events
+
+  `on_open` fires when the popup is added to the map, `on_close` when it leaves
+  it — including every close MapLibre performs on its own. Neither carries a
+  payload.
 
   > #### Slot content is cloned {: .warning}
   >
@@ -89,6 +117,9 @@ defmodule HoloMap.Popup do
   prop :focus_after_open, :any, default: nil
   prop :subpixel_positioning, :any, default: nil
 
+  prop :on_close, :any, default: nil
+  prop :on_open, :any, default: nil
+
   @impl Hologram.Component
   def template do
     ~HOLO"""
@@ -109,6 +140,7 @@ defmodule HoloMap.Popup do
         focus_after_open: @focus_after_open,
         subpixel_positioning: @subpixel_positioning
       })}
+      data-hm-events={HoloMap.Def.events(close: @on_close, open: @on_open)}
     ><div data-hm-content><slot /></div></div>
     """
   end

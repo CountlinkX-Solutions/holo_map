@@ -53,6 +53,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed before release
 
+- A popup MapLibre closed on its own — the close button, a click on the map, a
+  camera move — left the reconciler believing it was still open. Clicking the
+  same feature again changed no state, re-rendered nothing, and the popup never
+  returned. `HoloMap.Popup` now reports `on_close` (and `on_open`), a changed
+  declaration re-asserts a popup MapLibre had closed, and `addPopup` removes any
+  existing instance first so no path can stack two on one coordinate.
+
 - `HoloMap.Sky` cleared itself with `setSky(null)`, which MapLibre validates and
   rejects with "sky: object expected, null found". The sky was cleared anyway,
   but a console error was logged every time the component was removed.

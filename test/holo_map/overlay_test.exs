@@ -129,3 +129,26 @@ defmodule HoloMap.OverlayTest do
     end
   end
 end
+
+defmodule HoloMap.PopupEventTest do
+  use HoloMap.RenderCase, async: true
+
+  test "close and open handlers are encoded" do
+    html =
+      render_def(HoloMap.Popup,
+        id: "p",
+        lng_lat: {0, 0},
+        on_close: :selection_cleared,
+        on_open: :popup_shown
+      )
+
+    events = events_for(html, "p")
+
+    assert events["close"]["action"] == "selection_cleared"
+    assert events["open"]["action"] == "popup_shown"
+  end
+
+  test "no handler means no listener" do
+    assert events_for(render_def(HoloMap.Popup, id: "p", lng_lat: {0, 0}), "p") == %{}
+  end
+end

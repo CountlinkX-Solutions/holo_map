@@ -123,6 +123,40 @@ await step("markers: clicking a marker opened a state-driven popup", async () =>
 });
 
 
+// The popup's lifecycle against MapLibre closing it on its own.
+//
+// MapLibre closes a popup for reasons this runtime never hears about — the
+// close button, a click on the map, a camera move. Left unreported, the
+// component that opened it still believes it is open, so clicking the same
+// thing again changes no state, re-renders nothing, and the popup never comes
+// back. `on_close` is what keeps the declaration and the screen in agreement.
+const popupCount = () => page.evaluate(() => document.querySelectorAll(".maplibregl-popup").length);
+
+await page.locator(".maplibregl-popup-close-button").first().click();
+await page.waitForTimeout(1200);
+record("popup: the close button removed it", (await popupCount()) === 0);
+record("popup: on_close cleared the state that opened it",
+  (await page.evaluate(() => document.querySelectorAll('[data-hm="popup"]').length)) === 0);
+
+await page.locator(".maplibregl-marker .chip").click();
+await page.waitForTimeout(1200);
+record("popup: clicking the same marker opens it again", (await popupCount()) === 1);
+
+// Any path reaching addPopup twice would stack two identical popups on one
+// coordinate, which is invisible in the count of anything except popups.
+let mostPopups = 0;
+for (const act of [
+  () => page.locator(".maplibregl-marker .chip").click(),
+  () => page.locator(".maplibregl-marker .chip").dblclick(),
+  async () => { await page.locator(".maplibregl-marker svg").first().click({ force: true });
+                await page.locator(".maplibregl-marker .chip").click(); },
+]) {
+  await act();
+  await page.waitForTimeout(1300);
+  mostPopups = Math.max(mostPopups, await popupCount());
+}
+record("popup: repeated and overlapping opens never stack two", mostPopups === 1, `saw ${mostPopups}`);
+
 // Dragging, with all three handlers live and on_drag writing the position back
 // into state on every frame — which means a re-render and a setLngLat back into
 // the marker MapLibre is currently dragging. The gap between marker and cursor
