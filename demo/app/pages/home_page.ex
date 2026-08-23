@@ -51,7 +51,8 @@ defmodule Demo.HomePage do
       </li>
       <li>
         <Link to={Demo.ExtrusionPage}>3D extrusion</Link>
-        — polygons raised by a data-driven height, built in Elixir.
+        — real OpenStreetMap buildings raised over a basemap, and a second map on the same
+        page extruding geometry the application builds itself.
       </li>
       <li>
         <Link to={Demo.CameraPage}>Camera API</Link>

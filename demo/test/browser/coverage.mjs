@@ -178,17 +178,47 @@ await page.waitForTimeout(900);
 record("terrain: removing the Hillshade component removed the layer",
   (await inspect("relief", (map) => map.getLayer("relief-shade") ?? null)) === null);
 
-// --- fill-extrusion ----------------------------------------------------------
-await open("/extrusion", "blocks");
+// --- fill-extrusion, over a basemap, and two maps on one page --------------
+await page.goto(BASE + "/extrusion", { waitUntil: "domcontentloaded" });
+await page.waitForFunction(
+  () => window.HoloMap && window.HoloMap.map("buildings") && window.HoloMap.map("blocks"),
+  null,
+  { timeout: 30000 },
+);
+await page.waitForTimeout(9000);
+
+record("extrusion: two maps run side by side on one page",
+  (await page.evaluate(() => window.HoloMap.cids().sort().join(","))) === "blocks,buildings");
+record("extrusion: each map got its own canvas",
+  (await page.evaluate(() => document.querySelectorAll("canvas.maplibregl-canvas").length)) === 2);
+
+r = await inspect("buildings", (map) => {
+  const ids = map.getStyle().layers.map((l) => l.id);
+  return {
+    layer: map.getLayer("osm-buildings")?.type ?? null,
+    rendered: map.queryRenderedFeatures({ layers: ["osm-buildings"] }).length,
+    beforeLabels: ids.indexOf("osm-buildings") < ids.indexOf("waterway_line_label"),
+    height: map.getPaintProperty("osm-buildings", "fill-extrusion-height"),
+  };
+});
+record("extrusion: FillExtrusion on a source the style owns", r.layer === "fill-extrusion", String(r.layer));
+record("extrusion: real OpenStreetMap buildings rendered", r.rendered > 100, `${r.rendered} buildings`);
+record("extrusion: before_id placed the layer beneath the labels", r.beforeLabels);
+record("extrusion: zoom-driven height expression arrived intact", Array.isArray(r.height));
+
 r = await inspect("blocks", (map) => ({
   layer: map.getLayer("blocks-3d")?.type ?? null,
-  height: map.getPaintProperty("blocks-3d", "fill-extrusion-height"),
+  raster: map.getLayer("osm-base")?.type ?? null,
+  rendered: map.queryRenderedFeatures({ layers: ["blocks-3d"] }).length,
   gradient: map.getPaintProperty("blocks-3d", "fill-extrusion-vertical-gradient"),
+  height: map.getPaintProperty("blocks-3d", "fill-extrusion-height"),
 }));
-record("extrusion: HoloMap.Layer.FillExtrusion reached MapLibre", r.layer === "fill-extrusion", String(r.layer));
+record("extrusion: FillExtrusion on application-owned GeoJSON", r.layer === "fill-extrusion", String(r.layer));
+record("extrusion: it sits over a raster basemap", r.raster === "raster", String(r.raster));
+record("extrusion: the application's own polygons rendered", r.rendered > 10, `${r.rendered} blocks`);
 record("extrusion: multi-word paint key dasherized correctly", r.gradient === true, String(r.gradient));
-record("extrusion: height expression arrived intact", JSON.stringify(r.height) === JSON.stringify(["*", ["get", "height"], 1]),
-  JSON.stringify(r.height));
+record("extrusion: height expression arrived intact",
+  JSON.stringify(r.height) === JSON.stringify(["*", ["get", "height"], 1]), JSON.stringify(r.height));
 
 await page.getByRole("button", { name: "×6" }).click();
 await page.waitForTimeout(900);

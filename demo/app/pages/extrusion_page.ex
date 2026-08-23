@@ -4,9 +4,24 @@ defmodule Demo.ExtrusionPage do
   route "/extrusion"
   layout Demo.MainLayout, page_title: "3D extrusion — HoloMap"
 
+  # The basemap MapLibre's own "Display buildings in 3D" example uses: a free,
+  # keyless vector style whose `openmaptiles` source carries a `building` layer
+  # with per-building heights from OpenStreetMap.
+  @basemap "https://tiles.openfreemap.org/styles/bright"
+
+  # 3D buildings belong above the roads and below the labels. This is the first
+  # label layer in that style, so inserting before it puts them in the right
+  # place without hiding street names.
+  @before_labels "waterway_line_label"
+
+  @osm_tiles ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]
+
   def init(_params, component, _server) do
     put_state(component,
-      style: base_style(),
+      basemap: @basemap,
+      before_labels: @before_labels,
+      osm_tiles: @osm_tiles,
+      street_style: street_style(),
       blocks: blocks(),
       scale: 1,
       base_visible: true
@@ -17,15 +32,78 @@ defmodule Demo.ExtrusionPage do
     ~HOLO"""
     <h1>3D extrusion</h1>
     <p>
-      <code>HoloMap.Layer.FillExtrusion</code> raises polygons by a data-driven height. The
-      geometry here is built in Elixir — no external source is involved — so the heights are
-      whatever your application decides they are, which is the usual case for indoor plans,
-      zoning envelopes or planned volumes.
+      <code>HoloMap.Layer.FillExtrusion</code> raises polygons by a data-driven height. There
+      are two ways to feed it, and both are here — the second map is a separate
+      <code>HoloMap.Map</code> on the same page, which is all it takes to run two.
     </p>
+
+    <h2>Buildings from the basemap</h2>
     <p>
-      Changing the multiplier below rewrites the <code>fill-extrusion-height</code> expression
-      and reaches MapLibre as <code>setPaintProperty</code>. The buildings grow; nothing is
-      rebuilt.
+      The layer below reads from a source this library did not declare: the
+      <code>openmaptiles</code> source that comes with the style itself. A layer can name any
+      source the style provides, which is how you add to a basemap rather than replace it.
+      <code>before_id</code> slots the buildings above the roads and beneath the labels.
+    </p>
+
+    <HoloMap.Map
+      cid="buildings"
+      style={@basemap}
+      center={{-74.0066, 40.7135}}
+      zoom={15.5}
+      pitch={45}
+      bearing={-17.6}
+      max_pitch={85}
+      height="520px"
+      class="map"
+    >
+      <HoloMap.Layer.FillExtrusion
+        id="osm-buildings"
+        source="openmaptiles"
+        source_layer="building"
+        min_zoom={15}
+        before_id={@before_labels}
+        filter={["!=", ["get", "hide_3d"], true]}
+        paint={%{
+          fill_extrusion_color: [
+            "interpolate",
+            ["linear"],
+            ["get", "render_height"],
+            0,
+            "lightgray",
+            200,
+            "royalblue",
+            400,
+            "lightblue"
+          ],
+          fill_extrusion_height: [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            15,
+            0,
+            16,
+            ["get", "render_height"]
+          ],
+          fill_extrusion_base: [
+            "case",
+            [">=", ["get", "zoom"], 16],
+            ["get", "render_min_height"],
+            0
+          ],
+          fill_extrusion_opacity: 0.9
+        }}
+      />
+
+      <HoloMap.Control.Navigation position="top-right" visualize_pitch />
+    </HoloMap.Map>
+
+    <h2>Geometry your application owns</h2>
+    <p>
+      Here the polygons are built in Elixir and handed over as a
+      <code>HoloMap.Source.GeoJSON</code> — the usual case for indoor plans, zoning envelopes or
+      planned volumes, where the heights are whatever your application decides they are.
+      Changing the multiplier rewrites the <code>fill-extrusion-height</code> expression and
+      reaches MapLibre as <code>setPaintProperty</code>; nothing is rebuilt.
     </p>
 
     <div class="controls">
@@ -38,38 +116,56 @@ defmodule Demo.ExtrusionPage do
 
     <HoloMap.Map
       cid="blocks"
-      style={@style}
+      style={@street_style}
       center={{-69.9312, 18.4718}}
       zoom={16}
       pitch={60}
       bearing={-25}
       max_pitch={85}
-      height="540px"
+      height="520px"
       class="map"
       attribution_control={false}
     >
+      <HoloMap.Source.Raster
+        id="osm"
+        tiles={@osm_tiles}
+        tile_size={256}
+        max_zoom={19}
+        attribution="© OpenStreetMap contributors"
+      />
+      <HoloMap.Layer.Raster id="osm-base" source="osm" paint={%{raster_opacity: 0.75}} />
+
       <HoloMap.Source.GeoJSON id="blocks" data={@blocks} />
 
       <HoloMap.Layer.Fill
         id="blocks-footprint"
         source="blocks"
         visible={@base_visible}
-        paint={%{fill_color: "#1e293b", fill_opacity: 0.6}}
+        paint={%{fill_color: "#1e293b", fill_opacity: 0.35}}
       />
 
       <HoloMap.Layer.FillExtrusion
         id="blocks-3d"
         source="blocks"
         paint={%{
-          fill_extrusion_color: ["interpolate", ["linear"], ["get", "height"], 10, "#38bdf8", 60, "#f472b6"],
+          fill_extrusion_color: [
+            "interpolate",
+            ["linear"],
+            ["get", "height"],
+            10,
+            "#38bdf8",
+            60,
+            "#f472b6"
+          ],
           fill_extrusion_height: ["*", ["get", "height"], @scale],
           fill_extrusion_base: ["get", "base"],
-          fill_extrusion_opacity: 0.9,
+          fill_extrusion_opacity: 0.85,
           fill_extrusion_vertical_gradient: true
         }}
       />
 
       <HoloMap.Control.Navigation position="top-right" visualize_pitch />
+      <HoloMap.Control.Attribution position="bottom-right" compact />
     </HoloMap.Map>
     """
   end
@@ -114,7 +210,10 @@ defmodule Demo.ExtrusionPage do
     %{"type" => "FeatureCollection", "features" => features}
   end
 
-  defp base_style do
+  # A style whose only job is to hold a background; the streets underneath come
+  # from the raster source declared in the template, like MapLibre's own indoor
+  # mapping example.
+  defp street_style do
     %{
       "version" => 8,
       "sources" => %{},
@@ -122,7 +221,7 @@ defmodule Demo.ExtrusionPage do
         %{
           "id" => "background",
           "type" => "background",
-          "paint" => %{"background-color" => "#0b1120"}
+          "paint" => %{"background-color" => "#f8fafc"}
         }
       ]
     }
