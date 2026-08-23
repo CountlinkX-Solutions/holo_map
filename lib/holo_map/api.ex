@@ -4,7 +4,7 @@ defmodule HoloMap.API do
 
   Most of a map belongs in component props: which layers exist, how they are
   painted, what the camera is looking at. Some of it does not. "Fly to the
-  result the user just picked" is an event, not a value — re-rendering the same
+  result the user just picked" is an event, not a value. Re-rendering the same
   centre twice should not re-animate, and animating is the whole point.
 
   These functions are for that second category. Call them from an action:
@@ -14,7 +14,7 @@ defmodule HoloMap.API do
         put_state(component, :selected, params.id)
       end
 
-  The first argument is always the map's `cid` — the same string given to
+  The first argument is always the map's `cid`, the same string given to
   `HoloMap.Map`.
 
   > #### Actions only {: .warning}
@@ -32,7 +32,7 @@ defmodule HoloMap.API do
   | A one-off highlight that should not survive a re-render | `set_paint_property/4` |
 
   Anything set imperatively is overwritten the next time the declarative
-  specification for that object changes — the reconciler treats the rendered
+  specification for that object changes. The reconciler treats the rendered
   props as the source of truth.
   """
 
@@ -103,7 +103,7 @@ defmodule HoloMap.API do
   @doc """
   Fits the camera to a bounding box.
 
-  `bounds` accepts any shape `HoloMap.Spec.bounds/1` understands — a pair of
+  `bounds` accepts any shape `HoloMap.Spec.bounds/1` understands: a pair of
   corners, or a flat `[west, south, east, north]` list.
 
       HoloMap.API.fit_bounds("explorer", [-71.0, 19.0, -70.0, 20.0], padding: 48)
@@ -118,7 +118,7 @@ defmodule HoloMap.API do
   Recomputes the map's size after its container has been resized.
 
   MapLibre watches its container, so this is only needed when the container
-  changes size without a resize event the browser reports — a CSS transition on
+  changes size without a resize event the browser reports, such as a CSS transition on
   a sidebar, for instance.
   """
   @spec resize(String.t()) :: :ok

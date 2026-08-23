@@ -6,7 +6,7 @@ defmodule HoloMap.Source.GeoJSON do
       <HoloMap.Source.GeoJSON id="stops" data="/api/stops.geojson" cluster cluster_radius={60} />
 
   This is the source to reach for when the data comes from your own
-  application. `data` is a plain Elixir map — build it in a command, put it in
+  application. `data` is a plain Elixir map. Build it in a command, put it in
   state, and the map follows:
 
       def command(:load_parcels, params, server) do
@@ -17,7 +17,7 @@ defmodule HoloMap.Source.GeoJSON do
         put_state(component, :parcels, params.parcels)
       end
 
-  Changing `data` is the one source update that costs nothing structurally —
+  Changing `data` is the one source update that costs nothing structurally.
   MapLibre's `setData` swaps the features in place, leaving every layer built
   on top of it untouched.
 

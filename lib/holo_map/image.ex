@@ -13,7 +13,7 @@ defmodule HoloMap.Image do
   ## Why this component has to exist
 
   A symbol layer's `icon_image` names an image; it does not fetch one. The name
-  has to already exist somewhere the map can find it — and there are only two
+  has to already exist somewhere the map can find it, and there are only two
   such places.
 
   The first is the **sprite** the style ships: an atlas of named icons, declared
@@ -21,13 +21,13 @@ defmodule HoloMap.Image do
   airport icon works with no help from this component at all.
 
   The second is an image registered on the map at runtime, which is what
-  `HoloMap.Image` does. Anything of your own — a PNG, an SVG rendered to a
-  bitmap, a brand marker — goes through here.
+  `HoloMap.Image` does. Anything of your own (a PNG, an SVG rendered to a
+  bitmap, a brand marker) goes through here.
 
   Referencing a name that exists in neither place is a **quiet failure**.
   MapLibre emits a `styleimagemissing` event and draws nothing; there is no
   error, no console warning, and the layer looks like it has bad data. Not all
-  styles ship a sprite — MapLibre's own demo tiles ship none — so on those
+  styles ship a sprite, and MapLibre's own demo tiles ship none, so on those
   every icon must be registered.
 
   ## Props
@@ -51,7 +51,7 @@ defmodule HoloMap.Image do
   ## Recolouring with `sdf`
 
   A normal image is drawn with its own colours. An SDF image is a shape, and
-  `icon_color` paints it — one file, any number of colours, driven by data:
+  `icon_color` paints it: one file, any number of colours, driven by data.
 
       <HoloMap.Image id="pin" url="/icons/pin-sdf.png" sdf />
 
@@ -75,7 +75,7 @@ defmodule HoloMap.Image do
   ## Lifetime
 
   The image is registered while the component renders and removed when it stops.
-  Registered images survive a style change, unlike sources and layers — so
+  Registered images survive a style change, unlike sources and layers, so
   swapping `HoloMap.Map`'s `style` does not cost you the icons.
 
   Removing an image that a layer still references is not an error; that layer

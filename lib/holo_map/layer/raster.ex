@@ -3,7 +3,7 @@ defmodule HoloMap.Layer.Raster do
   Raster tiles, from a `HoloMap.Source.Raster`.
 
   A `HoloMap.Layer` locked to `type: "raster"`. See that module for the full
-  prop list, ordering rules and event payloads — everything here is identical
+  prop list, ordering rules and event payloads. Everything here is identical
   apart from the layer type, which is fixed and cannot be overridden.
 
   ## Paint properties

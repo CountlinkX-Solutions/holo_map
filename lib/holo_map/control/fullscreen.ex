@@ -10,8 +10,9 @@ defmodule HoloMap.Control.Fullscreen do
   | ---- | ---- | ----- |
   | `position` | string | Corner to place the control in. Default `"top-right"` |
 
-  The button expands the maps own container, so anything rendered outside it —
-  a sidebar, a legend in your own markup — is not part of the fullscreen view.
+  The button expands the map's own container, so anything rendered outside it,
+  such as a sidebar or a legend in your own markup, is not part of the
+  fullscreen view.
   Put controls that should survive fullscreen inside the map as `HoloMap.Control`
   components.
   """

@@ -7,19 +7,19 @@ defmodule HoloMap.Control do
         <HoloMap.Control.Scale unit="metric" position="bottom-left" />
       </HoloMap.Map>
 
-  Every control takes a `position` — `"top-left"`, `"top-right"`,
+  Every control takes a `position`: `"top-left"`, `"top-right"`,
   `"bottom-left"` or `"bottom-right"`, defaulting to `"top-right"`. Several
   controls in the same corner stack in the order they are declared.
 
   ## Available controls
 
-    * `HoloMap.Control.Navigation` — zoom buttons and a compass
-    * `HoloMap.Control.Scale` — a distance scale bar
-    * `HoloMap.Control.Geolocate` — locate and follow the user
-    * `HoloMap.Control.Fullscreen` — expand the map to fill the screen
-    * `HoloMap.Control.Attribution` — data attribution
-    * `HoloMap.Control.Globe` — switch between mercator and a globe
-    * `HoloMap.Control.Terrain` — let the user toggle 3D terrain
+    * `HoloMap.Control.Navigation`: zoom buttons and a compass
+    * `HoloMap.Control.Scale`: a distance scale bar
+    * `HoloMap.Control.Geolocate`: locate and follow the user
+    * `HoloMap.Control.Fullscreen`: expand the map to fill the screen
+    * `HoloMap.Control.Attribution`: data attribution
+    * `HoloMap.Control.Globe`: switch between mercator and a globe
+    * `HoloMap.Control.Terrain`: let the user toggle 3D terrain
 
   ## Attribution
 
@@ -28,7 +28,7 @@ defmodule HoloMap.Control do
   `attribution_control={false}` on `HoloMap.Map` when you want to place it
   yourself.
 
-  Attribution is usually a licensing obligation rather than a design choice —
+  Attribution is usually a licensing obligation rather than a design choice, so
   removing it entirely is generally not yours to decide. Prefer `compact`.
 
   ## Updates

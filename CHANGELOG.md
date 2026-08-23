@@ -16,21 +16,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.Heatmap`, `.Hillshade`, `.FillExtrusion`, plus a generic `HoloMap.Layer`
   for a type decided at runtime.
 - Overlays: `HoloMap.Marker` and `HoloMap.Popup`, both accepting slot content.
-- `HoloMap.Image`, which registers an image so a symbol layer's `icon_image` —
-  or a fill or line layer's pattern — can name it. Without it, only icons the
+- `HoloMap.Image`, which registers an image so a symbol layer's `icon_image`,
+  or a fill or line layer's pattern, can name it. Without it, only icons the
   style's own sprite carries are reachable, and naming anything else fails
   silently: MapLibre emits `styleimagemissing` and draws nothing.
 - Controls: `HoloMap.Control.Navigation`, `.Scale`, `.Geolocate`, `.Fullscreen`,
   `.Attribution`, plus `.Globe` and `.Terrain`, both new in MapLibre GL JS 6.
 - 3D: `HoloMap.Terrain` and `HoloMap.Sky`.
-- `HoloMap.API` — `fly_to/2`, `ease_to/2`, `jump_to/2`, `fit_bounds/3`,
+- `HoloMap.API`: `fly_to/2`, `ease_to/2`, `jump_to/2`, `fit_bounds/3`,
   `resize/1`, `set_style/2`, `set_filter/3`, `set_paint_property/4`,
   `set_layout_property/4`, `set_feature_state/3`, `remove_feature_state/3`.
 - MapLibre events surfaced as Hologram actions, with payloads documented per
   component and in the Events guide.
 - `window.HoloMap.map/1`, so MapLibre plugins can reach the raw instance.
 - A Phoenix + Hologram demo application exercising every component across
-  eleven pages, and three Playwright suites driving a real MapLibre instance —
+  eleven pages, and Playwright suites driving a real MapLibre instance:
   component behaviour, full source/layer coverage, and navigation.
 
 ### Notes on the design
@@ -53,8 +53,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed before release
 
-- A popup MapLibre closed on its own — the close button, a click on the map, a
-  camera move — left the reconciler believing it was still open. Clicking the
+- A popup MapLibre closed on its own (the close button, a click on the map, a
+  camera move) left the reconciler believing it was still open. Clicking the
   same feature again changed no state, re-rendered nothing, and the popup never
   returned. `HoloMap.Popup` now reports `on_close` (and `on_open`), a changed
   declaration re-asserts a popup MapLibre had closed, and `addPopup` removes any

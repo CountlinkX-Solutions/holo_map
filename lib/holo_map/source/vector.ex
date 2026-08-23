@@ -11,7 +11,7 @@ defmodule HoloMap.Source.Vector do
         max_zoom={14}
       />
 
-  Layers reading from a vector source **must** set `source_layer` — a vector
+  Layers reading from a vector source **must** set `source_layer`. A vector
   tile carries several named layers and MapLibre has no way to guess which one
   is meant:
 

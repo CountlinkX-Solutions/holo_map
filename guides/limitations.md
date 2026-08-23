@@ -28,7 +28,7 @@ Use the marker's own `on_click` prop instead:
 </HoloMap.Marker>
 ```
 
-The markup still renders and restyles normally on re-render — only the bindings
+The markup still renders and restyles normally on re-render. Only the bindings
 are inert. For genuinely interactive content, put it outside the map and drive
 it from state.
 
@@ -56,7 +56,7 @@ In a HOLO template a bare attribute is an empty *string*, not `true`. `HoloMap`
 coerces this for every boolean prop it knows about, so `<... cluster />` works.
 A boolean prop it has missed would reach MapLibre as `""` and fail style
 validation with `boolean expected, string found`. Pass `={true}` explicitly if
-you hit one — and it is worth reporting.
+you hit one, and it is worth reporting.
 
 ## Controls are replaced, not updated
 
@@ -70,7 +70,7 @@ move a control between corners in place.
 ## Structural source changes tear down layers
 
 Only a GeoJSON source's `data` and an image source's `url`/`coordinates` update
-in place. Any other source key — cluster settings, tile URLs, zoom ranges — is
+in place. Any other source key (cluster settings, tile URLs, zoom ranges) is
 structural: MapLibre refuses to remove a source that still has layers attached,
 so the reconciler detaches the layers it owns, rebuilds the source, and re-adds
 them in declared order.
@@ -80,19 +80,19 @@ It works, and it is not free. Put frequently-changing data in `data`.
 ## MapLibre is bundled once per page
 
 Hologram builds one JavaScript bundle per page, and a page that uses `HoloMap`
-carries its own copy of MapLibre — around 1 MB minified, 0.26 MB gzipped. Five
+carries its own copy of MapLibre, around 1 MB minified and 0.26 MB gzipped. Five
 map pages are five distinct downloads.
 
 This is Hologram's bundling model, not something the library can change. It is
 also not as bad as it sounds: a visitor only downloads the pages they actually
 visit, and each is content-hash named and so cacheable forever. But it does make
-compression and cache headers matter more than usual — see
+compression and cache headers matter more than usual. See
 [Installation](installation.html#serving-the-bundles).
 
 ## No `HoloMap` styling of its own
 
 The library ships no CSS. MapLibre's own stylesheet is a required install step,
-and everything else — sizing, borders, marker chrome — is yours. That is
+and everything else (sizing, borders, marker chrome) is yours. That is
 deliberate: a component library that imposed a look would be fought rather than
 used.
 
@@ -100,7 +100,7 @@ used.
 
 The registry is keyed by `cid`, which is also the DOM container's id. Two
 `HoloMap.Map` components with the same `cid` on one page is undefined behaviour
-— though Hologram itself already requires cids to be unique.
+though Hologram itself already requires cids to be unique.
 
 ## Hologram gaps this library works around
 

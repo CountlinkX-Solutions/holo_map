@@ -5,14 +5,14 @@ defmodule HoloMap.JSON do
   Every component specification travels from Elixir to MapLibre as a JSON
   string in a DOM attribute, and that string has to be produced during
   *client-side* re-renders as well as during server-side rendering. Hologram
-  compiles a well-defined subset of Elixir to JavaScript, and `Jason` — which
-  leans on Erlang primitives and protocols outside that subset — is not part of
+  compiles a well-defined subset of Elixir to JavaScript, and `Jason`, which
+  leans on Erlang primitives and protocols outside that subset, is not part of
   it. So `HoloMap` carries its own encoder, written only in constructs the
   Hologram client runtime supports.
 
   It handles exactly what a MapLibre style specification contains: strings,
   integers, floats, booleans, `nil`, atoms, lists and maps. Anything else
-  raises `ArgumentError` rather than being silently coerced — a struct or a
+  raises `ArgumentError` rather than being silently coerced. A struct or a
   tuple reaching this function means the calling component built a spec it did
   not intend to.
 
@@ -48,7 +48,7 @@ defmodule HoloMap.JSON do
   def encode(value) when is_atom(value), do: encode_string(Atom.to_string(value))
 
   # Structs are maps, so they would otherwise fall into the map clause and be
-  # encoded with their `__struct__` field — or, when they are also Enumerable
+  # encoded with their `__struct__` field, or, when they are also Enumerable
   # (a Range, a MapSet), fail obscurely inside the list clause. A struct in a
   # map specification is always a mistake, so it is named as one.
   def encode(%module{}) do
@@ -91,7 +91,7 @@ defmodule HoloMap.JSON do
   # Escapes only what JSON requires: the quote, the backslash and the C0
   # control range. Iterating bytes rather than graphemes is safe here because
   # every byte of a multi-byte UTF-8 sequence is >= 0x80, so none of them can
-  # collide with an ASCII character that needs escaping — they pass through
+  # collide with an ASCII character that needs escaping. They pass through
   # untouched and the sequence stays intact.
   defp encode_string(string) do
     escaped =

@@ -3,7 +3,7 @@ defmodule HoloMap.Layer.Circle do
   Circles, the usual way to draw points.
 
   A `HoloMap.Layer` locked to `type: "circle"`. See that module for the full
-  prop list, ordering rules and event payloads — everything here is identical
+  prop list, ordering rules and event payloads. Everything here is identical
   apart from the layer type, which is fixed and cannot be overridden.
 
   ## Paint properties

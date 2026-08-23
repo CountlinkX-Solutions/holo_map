@@ -7,7 +7,7 @@ MapLibre events come back as ordinary Hologram actions.
 Event props accept the same shapes Hologram's own longhand event bindings do:
 
 ```elixir
-# Bare action name — dispatched to the page.
+# Bare action name, dispatched to the page.
 on_click={:parcel_clicked}
 
 # Longhand, when the handler lives on a component rather than the page.
@@ -29,8 +29,8 @@ on_click={if @selectable do :parcel_clicked end}
 `target` is a component cid, `"page"`, or `"layout"`. It defaults to `"page"`.
 
 That default differs from Hologram's own, which is the closest enclosing
-*stateful* component. `HoloMap`'s children are deliberately stateless — they
-have no `cid` — so there is nothing to fall back to, and silently targeting the
+*stateful* component. `HoloMap`'s children are deliberately stateless and have
+no `cid`, so there is nothing to fall back to, and silently targeting the
 map container would send the action to `HoloMap.Map` rather than to your
 handler.
 
@@ -107,7 +107,7 @@ carried over.
 >
 > Your own GeoJSON property names are part of that: a property written as
 > `"parcel_id"` in the data is matched as `%{parcel_id: id}`. Matching with
-> string keys silently fails — the clause simply does not match, and a `case`
+> string keys silently fails. The clause simply does not match, and a `case`
 > with a catch-all falls through without an error.
 
 ```elixir
@@ -130,7 +130,7 @@ than assuming a head.
 `on_close` fires for every close, including the ones MapLibre performs without
 asking: the close button, a click on the map (`close_on_click` is on by
 default) and a camera move. Handle it by clearing whatever state opened the
-popup — otherwise the component still believes the popup is open, and clicking
+popup. Otherwise the component still believes the popup is open, and clicking
 the same feature again re-renders nothing.
 
 ```elixir
@@ -157,7 +157,7 @@ end
 `on_drag` fires on every pointer move, and writing the position back into state
 from it is safe: the value going back is the one MapLibre just reported, so the
 `setLngLat` the reconciler performs is a no-op and the marker stays locked to
-the cursor. Prefer `on_drag_end` when only the final position matters — there is
+the cursor. Prefer `on_drag_end` when only the final position matters, since there is
 no reason to re-render on every frame for a value nothing reads until the drag
 ends.
 
@@ -195,14 +195,14 @@ end
 
 ## What is not reported back
 
-A camera move the reconciler itself made — because you changed `center` or
-`zoom` from state — does **not** fire `on_move_end`. Only a move the user or the
+A camera move the reconciler itself made, because you changed `center` or
+`zoom` from state, does **not** fire `on_move_end`. Only a move the user or the
 imperative API caused does.
 
 Without that, writing the camera from state would echo straight back into an
 action: a feedback loop at best, and at worst an action arriving on a page that
 has already changed. If you need to know when your own camera assignment
-settled, you already do — it is the state change that caused it.
+settled, you already do: it is the state change that caused it.
 
 ## Ordering and timing
 

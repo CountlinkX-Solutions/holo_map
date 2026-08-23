@@ -2,7 +2,7 @@ defmodule HoloMap.Def do
   @moduledoc """
   Shared plumbing for the definition components nested inside a `HoloMap.Map`.
 
-  Every child of a map — a source, a layer, a marker, a control — renders the
+  Every child of a map (a source, a layer, a marker, a control) renders the
   same shape: one empty element carrying its specification as JSON in data
   attributes. The browser reconciler reads those attributes and does the actual
   MapLibre work. This module holds the pieces that shape is built from.
@@ -17,7 +17,7 @@ defmodule HoloMap.Def do
   | `data-hm-events` | Event name to action-dispatch descriptor, JSON-encoded |
   | `data-hm-map` | The cid of the owning map. Debugging aid; the reconciler uses DOM containment |
 
-  You only need this module to write a definition component of your own — see
+  You only need this module to write a definition component of your own. See
   `__using__/1`. Using the components in `HoloMap` requires none of it.
   """
 
@@ -42,8 +42,8 @@ defmodule HoloMap.Def do
   from the context `HoloMap.Map` publishes.
 
   Pair it with `map_cid!/1` in the template. Together they turn "definition
-  component rendered outside a map" — otherwise a stray element that silently
-  never becomes part of anything — into a named error that says what to do.
+  component rendered outside a map", otherwise a stray element that silently
+  never becomes part of anything, into a named error that says what to do.
 
       defmodule MyApp.HeatmapLayer do
         use HoloMap.Def
@@ -112,7 +112,7 @@ defmodule HoloMap.Def do
 
   Takes a keyword list of `{maplibre_event_name, handler_prop}`. Unset handlers
   are dropped rather than encoded as `null`, which keeps the attribute stable
-  when a component declares more events than the caller uses — a changed
+  when a component declares more events than the caller uses. A changed
   attribute string is what makes the reconciler rebind listeners.
 
       iex> HoloMap.Def.events(click: :parcel_clicked, mouseleave: nil)

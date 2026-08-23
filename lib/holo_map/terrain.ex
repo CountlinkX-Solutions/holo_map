@@ -5,7 +5,7 @@ defmodule HoloMap.Terrain do
       <HoloMap.Source.RasterDEM id="dem" tiles={@dem_tiles} encoding="terrarium" />
       <HoloMap.Terrain source="dem" exaggeration={1.4} />
 
-  Terrain is a property of the map, not a layer — there is one, or there is
+  Terrain is a property of the map, not a layer. There is one, or there is
   none. Declaring the component turns it on; removing it from the template
   turns it off and the map flattens back out.
 
@@ -18,7 +18,7 @@ defmodule HoloMap.Terrain do
 
   ## Making terrain visible
 
-  Terrain does nothing at zero pitch — a hill viewed from directly above still
+  Terrain does nothing at zero pitch, because a hill viewed from directly above still
   looks flat. Give the map a `pitch`, and usually let the user change it:
 
       <HoloMap.Map cid="relief" style={@style} pitch={60} max_pitch={85}>

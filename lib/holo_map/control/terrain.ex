@@ -24,7 +24,7 @@ defmodule HoloMap.Control.Terrain do
   the map starts flat.
 
   Rendering both puts them in conflict. The declaration wins whenever it is
-  re-applied — so a user who switches terrain off with the button will see it
+  re-applied, so a user who switches terrain off with the button will see it
   come back the next time the `HoloMap.Terrain` component's props change. Pick
   one. If you want a toggle *and* control over the initial state, use
   `HoloMap.Terrain` behind a conditional and drive it from your own state:
@@ -37,7 +37,7 @@ defmodule HoloMap.Control.Terrain do
 
   Terrain does nothing at zero pitch. Give the map a `pitch`, raise `max_pitch`,
   and add `HoloMap.Control.Navigation` with `visualize_pitch` so the user can
-  tilt back and forth — otherwise the button appears to do nothing at all.
+  tilt back and forth. Otherwise the button appears to do nothing at all.
   """
 
   use HoloMap.Def

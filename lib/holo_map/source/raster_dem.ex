@@ -15,12 +15,12 @@ defmodule HoloMap.Source.RasterDEM do
   ## Encoding
 
   `encoding` must match how the tiles were produced, and there is no way to
-  detect it — the wrong value renders a plausible-looking but entirely fictional
+  detect it. The wrong value renders a plausible-looking but entirely fictional
   landscape.
 
-    * `"mapbox"` — the Mapbox Terrain-RGB scheme (the default)
-    * `"terrarium"` — the Mapzen/AWS Terrain Tiles scheme
-    * `"custom"` — supply your own `red_factor`, `green_factor`, `blue_factor`
+    * `"mapbox"`: the Mapbox Terrain-RGB scheme (the default)
+    * `"terrarium"`: the Mapzen/AWS Terrain Tiles scheme
+    * `"custom"`: supply your own `red_factor`, `green_factor`, `blue_factor`
       and `base_shift`
 
   ## Props

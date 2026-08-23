@@ -3,7 +3,7 @@ defmodule HoloMap.Layer.Hillshade do
   Shaded relief, from a `HoloMap.Source.RasterDEM`.
 
   A `HoloMap.Layer` locked to `type: "hillshade"`. See that module for the full
-  prop list, ordering rules and event payloads — everything here is identical
+  prop list, ordering rules and event payloads. Everything here is identical
   apart from the layer type, which is fixed and cannot be overridden.
 
   ## Paint properties

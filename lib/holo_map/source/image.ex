@@ -19,7 +19,7 @@ defmodule HoloMap.Source.Image do
   so the image can be placed rotated or skewed.
 
   Useful for floor plans, historical map scans, weather frames and site
-  overlays — anything that is one picture rather than a tile pyramid.
+  overlays. Anything that is one picture rather than a tile pyramid.
 
   ## Props
 
@@ -30,7 +30,7 @@ defmodule HoloMap.Source.Image do
   | `coordinates` | list | **Required.** Four `{lng, lat}` corners, clockwise from top-left |
 
   Changing `url` or `coordinates` uses MapLibre's `updateImage`, so an animated
-  sequence — a radar loop, a time series — swaps frames without rebuilding the
+  sequence, such as a radar loop or a time series, swaps frames without rebuilding the
   source or disturbing the layer above it.
   """
 

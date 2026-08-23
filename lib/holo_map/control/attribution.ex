@@ -15,7 +15,7 @@ defmodule HoloMap.Control.Attribution do
   | `custom_attribution` | string or list | Extra credits, alongside the ones sources declare |
 
   Set `attribution_control={false}` on `HoloMap.Map` when using this component,
-  or the map ends up with two attribution controls — MapLibre adds one by
+  or the map ends up with two attribution controls, because MapLibre adds one by
   default.
   """
 

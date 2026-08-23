@@ -14,8 +14,8 @@ defmodule HoloMap.Map do
   it, and it is the first argument to every `HoloMap.API` function. One
   identifier, no second `id` prop to keep in sync.
 
-  A `cid` is mandatory. Hologram only runs `init/3` — and therefore only allows
-  actions — on stateful components, and the map needs an action to boot.
+  A `cid` is mandatory. Hologram only runs `init/3`, and therefore only allows
+  actions, on stateful components, and the map needs an action to boot.
 
   ## Sizing
 
@@ -29,7 +29,7 @@ defmodule HoloMap.Map do
   MapLibre parses tiles in a Web Worker that it builds by importing
   `maplibre-gl-worker.mjs`, resolved relative to its own module URL. Hologram
   bundles MapLibre into a page bundle under `/hologram/`, so that resolution
-  lands on a file which is not there — and the failure happens inside a worker,
+  lands on a file which is not there, and the failure happens inside a worker,
   where nothing reports it. The symptom is a map that renders its background,
   logs nothing, and never draws a single tile.
 
@@ -41,13 +41,13 @@ defmodule HoloMap.Map do
   ## Declarative camera versus animated camera
 
   `center`, `zoom`, `bearing` and `pitch` are state. Changing one jumps the
-  camera there, and panning the map by hand does *not* write back into them —
+  camera there, and panning the map by hand does *not* write back into them:
   the props describe where the application thinks the camera should be, not
   where the user dragged it. Nothing re-renders while the user interacts, so
   there is no fight between the two.
 
-  When a camera move is an *event* rather than a value — flying to a search
-  result — use `HoloMap.API.fly_to/2` and leave the props alone.
+  When a camera move is an *event* rather than a value, such as flying to a
+  search result, use `HoloMap.API.fly_to/2` and leave the props alone.
 
 
   ## Props
@@ -64,9 +64,9 @@ defmodule HoloMap.Map do
   | `attribution_control` | boolean | MapLibre's built-in attribution. See `HoloMap.Control.Attribution` to place it yourself |
   | `cooperative_gestures` | boolean | Require ctrl/⌘ to scroll-zoom, so the page still scrolls |
   | `drag_rotate` / `drag_pan` / `scroll_zoom` / `double_click_zoom` / `box_zoom` / `keyboard` / `touch_zoom_rotate` | boolean | Individual interaction handlers |
-  | `antialias` / `pixel_ratio` / `fade_duration` / `render_world_copies` / `bearing_snap` / `track_resize` / `pitch_with_rotate` / `max_tile_cache_size` / `local_ideograph_font_family` / `validate_style` / `locale` | — | Passed straight through to MapLibre |
+  | `antialias` / `pixel_ratio` / `fade_duration` / `render_world_copies` / `bearing_snap` / `track_resize` / `pitch_with_rotate` / `max_tile_cache_size` / `local_ideograph_font_family` / `validate_style` / `locale` | various | Passed straight through to MapLibre |
   | `options` | map | Raw MapLibre constructor options, merged last. Keys must be MapLibre's own camelCase names: `options={%{"maxCanvasSize" => [2048, 2048]}}` |
-  | `worker_url` | string | Where the application serves `maplibre-gl-worker.mjs`. Default `"/assets/maplibre-gl-worker.mjs"` — see below |
+  | `worker_url` | string | Where the application serves `maplibre-gl-worker.mjs`. Default `"/assets/maplibre-gl-worker.mjs"`. See below |
   | `class` | string | CSS classes for the wrapper element |
   | `height` / `width` | string | Inline size for the canvas. `nil` opts out and leaves sizing to CSS |
 

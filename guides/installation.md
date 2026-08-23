@@ -4,7 +4,7 @@
 dependency, the `maplibre-gl` npm package, and two static files served at a URL
 it can reach. Only the first is automatic.
 
-The reason is structural. Hologram resolves bare import specifiers — `"maplibre-gl"` —
+The reason is structural. Hologram resolves bare import specifiers such as `"maplibre-gl"`
 against the **host application's** `assets/package.json`, and its compiler
 npm-installs only its own. A library has no way to reach into either.
 
@@ -17,7 +17,7 @@ Hologram 0.11 sets the floor, and it is a high one:
 | Elixir | 1.19 |
 | OTP | 28.1 |
 | Node.js | 20 |
-| A working Phoenix application | — |
+| A working Phoenix application | any |
 
 With `asdf`:
 
@@ -45,7 +45,7 @@ end
 ```
 
 Follow Hologram's own [installation guide](https://hologram.page/docs/installation)
-for the compiler entry, the router plug, the static path and the formatter — all
+for the compiler entry, the router plug, the static path and the formatter, all
 of which belong to the application that owns the Phoenix endpoint, not to
 `HoloMap`.
 
@@ -78,7 +78,7 @@ end
 MapLibre parses tiles in a Web Worker that it builds by importing
 `maplibre-gl-worker.mjs`, resolved relative to its own module URL. Hologram
 bundles MapLibre into a page bundle under `/hologram/`, so that resolution lands
-on a file which is not there — and the failure happens inside a worker, where
+on a file which is not there, and the failure happens inside a worker, where
 nothing reports it. What you see is a map that renders its background, logs
 nothing at all, and never draws a single tile.
 
@@ -122,7 +122,7 @@ Or, if your application has a CSS pipeline, import it there instead:
 ## Serving the bundles
 
 MapLibre is a big library, and Hologram builds **one bundle per page**. A page
-that uses `HoloMap` therefore carries its own copy — around 1 MB minified — and
+that uses `HoloMap` therefore carries its own copy, around 1 MB minified, and
 five such pages are five distinct 1 MB downloads, not one cached download reused
 five times. That is inherent to Hologram's page-bundle model, not something this
 library can avoid.
@@ -135,7 +135,7 @@ typical Phoenix application. In this demo they take a six-page tour from
 
 Bandit and Cowboy both compress responses on the fly, but `Plug.Static` answers
 with `send_file/3` and a sendfile cannot be compressed in flight. So a 1.06 MB
-bundle goes out at 1.06 MB rather than the 0.26 MB it gzips to — a 4× cost that
+bundle goes out at 1.06 MB rather than the 0.26 MB it gzips to, a 4× cost that
 is easy to miss, because HTML responses from the same server *are* compressed.
 
 Pre-compress after every build and set `gzip: true`:
@@ -149,7 +149,7 @@ end
 ```
 
 It has to run *after* the Hologram compiler, which rewrites
-`priv/static/hologram` on every build — and in `dev`/`test` that compiler is a
+`priv/static/hologram` on every build, and in `dev`/`test` that compiler is a
 no-op unless `HOLOGRAM_START=1` is set. `mix holo` sets it, but `mix holo`
 starts the server and never returns, so a gzip step ordered after it never
 runs and one ordered before it compresses the *previous* build. Force the
@@ -169,7 +169,7 @@ bundles that no longer exist; clean the orphans in the same step.
 
 Hologram names every bundle by content hash, so the bytes behind a given URL
 never change. `Plug.Static`'s default is `cache-control: public` with no
-`max-age`, which makes the browser revalidate on every navigation — cheap when
+`max-age`, which makes the browser revalidate on every navigation: cheap when
 it answers 304, and a full re-download whenever a proxy or a devtools
 "Disable cache" tick removes that conditional.
 
@@ -187,7 +187,7 @@ plug Plug.Static,
 ### Do not serve sourcemaps in production
 
 esbuild writes a sourcemap beside every bundle, and they are about five times
-the size of the code — 28 MB across this demo. Only a browser with devtools open
+the size of the code, 28 MB across this demo. Only a browser with devtools open
 requests one, so they cost nothing in normal use and everything the moment
 someone opens the network tab. Keep them in development, refuse them elsewhere:
 
@@ -243,10 +243,10 @@ with no countries in it, step 3 is the one to revisit.
 
 | Symptom | Cause |
 | ------- | ----- |
-| Background renders, no tiles ever, clean console | The worker is not being served — step 3 |
+| Background renders, no tiles ever, clean console | The worker is not being served, see step 3 |
 | Nothing at all, container has zero height | `height` was set to `nil` without CSS taking over |
 | `boolean expected, string found` from MapLibre | A boolean prop this library does not yet coerce. Pass `={true}` explicitly and please report it |
 | `Hologram.PropError` naming a `HoloMap` component | A required prop is missing at that call site |
 | `a HoloMap definition component was rendered outside a <HoloMap.Map>` | A source, layer, marker, popup or control is not nested inside a map |
-| `mix holo` exits with `MatchError` on `:ignore` | The filesystem watcher is missing — see Prerequisites |
+| `mix holo` exits with `MatchError` on `:ignore` | The filesystem watcher is missing, see Prerequisites |
 | Browser cannot reach `localhost` but `curl` can | The endpoint is listening on IPv4 only while `localhost` resolves to `::1` |

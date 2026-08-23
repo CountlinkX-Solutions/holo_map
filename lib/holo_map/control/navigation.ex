@@ -13,7 +13,7 @@ defmodule HoloMap.Control.Navigation do
   | `show_zoom` | boolean | Show the zoom buttons. Default true |
   | `visualize_pitch` | boolean | Tilt the compass needle to reflect pitch |
 
-  The compass is also how a user resets a rotated map — clicking it returns
+  The compass is also how a user resets a rotated map. Clicking it returns
   north to up. Hiding it on a map where `drag_rotate` is enabled leaves them
   with no way back.
   """

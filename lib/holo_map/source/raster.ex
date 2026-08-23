@@ -1,6 +1,6 @@
 defmodule HoloMap.Source.Raster do
   @moduledoc """
-  Raster tiles — aerial imagery, scanned maps, any pre-rendered tile pyramid.
+  Raster tiles: aerial imagery, scanned maps, any pre-rendered tile pyramid.
 
       <HoloMap.Source.Raster
         id="ortho"
@@ -11,7 +11,7 @@ defmodule HoloMap.Source.Raster do
       <HoloMap.Layer.Raster id="ortho-layer" source="ortho" paint={%{raster_opacity: 0.8}} />
 
   `tile_size` matters more than it looks: `256` is the classic scheme, `512`
-  matches the vector-tile grid. Getting it wrong does not error — it shifts the
+  matches the vector-tile grid. Getting it wrong does not error. It shifts the
   imagery half a zoom level out of alignment with everything else.
 
   ## Props

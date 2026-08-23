@@ -3,7 +3,7 @@ defmodule HoloMap.Runtime do
   The Elixir seam onto the browser runtime.
 
   This is the only module in `HoloMap` that touches JavaScript. Everything else
-  — components, specifications, event normalisation — is ordinary Elixir that
+  (components, specifications, event normalisation) is ordinary Elixir that
   can be unit tested, which is the point: Hologram's JS interop is a no-op on
   the server and cannot be covered by `ExUnit`, so the less code lives behind
   it, the more of the library is actually verifiable.
@@ -16,7 +16,7 @@ defmodule HoloMap.Runtime do
   >
   > Hologram executes JS interop exclusively inside action handlers. Calling
   > these functions from `init/2`, `init/3` or a command silently does nothing
-  > — on the server they are compiled to no-ops. `HoloMap.Map` therefore boots
+  > On the server they are compiled to no-ops. `HoloMap.Map` therefore boots
   > through `put_action/2` rather than directly from `init/3`.
   """
 
@@ -31,7 +31,7 @@ defmodule HoloMap.Runtime do
 
   Idempotent. Calling it for a map that is already running reconciles that map
   instead of building a second one, and calling it after a client-side
-  navigation — where the same cid is rendered onto a fresh DOM node — disposes
+  navigation, where the same cid is rendered onto a fresh DOM node, disposes
   the stale instance first.
   """
   @spec boot(String.t()) :: :ok
@@ -61,7 +61,7 @@ defmodule HoloMap.Runtime do
   @doc """
   Documents the JavaScript-side escape hatch. Not callable from Elixir.
 
-  A MapLibre plugin — a draw control, a geocoder, a deck.gl overlay — needs the
+  A MapLibre plugin (a draw control, a geocoder, a deck.gl overlay) needs the
   raw `maplibregl.Map` object, and Hologram's interop cannot hand one to a
   third-party script. Every booted map is therefore published on `window`:
 
@@ -70,7 +70,7 @@ defmodule HoloMap.Runtime do
       window.HoloMap.destroy("explorer")
 
   Reach for it from your own JavaScript when a plugin needs the instance. From
-  Elixir, use `HoloMap.API` and `call/3` instead — they queue correctly against
+  Elixir, use `HoloMap.API` and `call/3` instead. They queue correctly against
   the style's readiness, which a raw handle does not.
   """
   @spec global_api() :: :ok

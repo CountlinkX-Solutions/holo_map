@@ -41,10 +41,10 @@ flickers, and there is no JavaScript in your application.
 | Sources | `GeoJSON`, `Vector`, `Raster`, `RasterDEM`, `Image` |
 | Layers | `Fill`, `Line`, `Circle`, `Symbol`, `Raster`, `Heatmap`, `Hillshade`, `FillExtrusion`, plus a generic `Layer` |
 | Overlays | `Marker`, `Popup` |
-| Images | `Image` — register your own icons and patterns |
+| Images | `Image`, for registering your own icons and patterns |
 | Controls | `Navigation`, `Scale`, `Geolocate`, `Fullscreen`, `Attribution`, `Globe`, `Terrain` |
 | 3D | `Terrain`, `Sky` |
-| Imperative | `HoloMap.API` — `fly_to/2`, `fit_bounds/3`, `set_feature_state/3`, … |
+| Imperative | `HoloMap.API`: `fly_to/2`, `fit_bounds/3`, `set_feature_state/3`, … |
 
 ## Requirements
 
@@ -60,12 +60,12 @@ def deps do
 end
 ```
 
-`HoloMap` cannot ship its npm dependency — Hologram resolves bare import specifiers against the
+`HoloMap` cannot ship its npm dependency, because Hologram resolves bare import specifiers against the
 *host application's* `assets/package.json`. Three steps, once per application, and the
 [Installation guide](guides/installation.md) walks through them:
 
 1. `npm install --prefix assets maplibre-gl@^6.5.0`
-2. Serve `maplibre-gl-worker.mjs` and `maplibre-gl-shared.mjs` from `/assets/` — MapLibre's own
+2. Serve `maplibre-gl-worker.mjs` and `maplibre-gl-shared.mjs` from `/assets/`. MapLibre's own
    resolution of its worker breaks once the library is bundled, and the failure is silent
 3. Load `maplibre-gl.css`
 
@@ -88,7 +88,7 @@ watches those elements with a `MutationObserver`:
 map.setPaintProperty("parcels-fill", "fill-color", "#ef4444")
 ```
 
-Mount, update and unmount all fall out of that, without a framework hook for any of them — and it
+Mount, update and unmount all fall out of that, without a framework hook for any of them, and it
 works *with* Hologram's virtual DOM, which already preserves JavaScript-managed children. The
 [Architecture guide](guides/architecture.md) goes into the consequences.
 
@@ -97,12 +97,12 @@ is unit tested. Only `HoloMap.Runtime` touches JavaScript.
 
 ## Guides
 
-- [Installation](guides/installation.md) — the three steps `HoloMap` cannot do for you
-- [Getting started](guides/getting-started.md) — from an empty map to data, state and events
-- [Architecture](guides/architecture.md) — how a prop change becomes a MapLibre call, and what it costs
-- [Events](guides/events.md) — handler syntax, targets, and every payload
-- [Imperative API](guides/imperative-api.md) — the escape hatch, and when to reach for it
-- [Limitations](guides/limitations.md) — what does not work, and why
+- [Installation](guides/installation.md): the three steps `HoloMap` cannot do for you
+- [Getting started](guides/getting-started.md): from an empty map to data, state and events
+- [Architecture](guides/architecture.md): how a prop change becomes a MapLibre call, and what it costs
+- [Events](guides/events.md): handler syntax, targets, and every payload
+- [Imperative API](guides/imperative-api.md): the escape hatch, and when to reach for it
+- [Limitations](guides/limitations.md): what does not work, and why
 
 Every module also carries a full `@moduledoc` with prop tables and the reasoning behind the
 awkward parts. Run `mix docs`, or start from `HoloMap`.
@@ -110,7 +110,7 @@ awkward parts. Run `mix docs`, or start from `HoloMap`.
 ## Demo
 
 `demo/` is a Phoenix + Hologram application exercising every component against MapLibre's public
-demo tiles — no API key needed.
+demo tiles, so no API key is needed.
 
 ```console
 $ mix demo.setup
@@ -118,7 +118,7 @@ $ mix server        # http://localhost:4000
 ```
 
 Those run from the repository root. The demo is its own Mix project in `demo/`, so
-`cd demo && mix setup && mix server` works too — the root aliases just save the `cd`.
+`cd demo && mix setup && mix server` works too. The root aliases just save the `cd`.
 
 Its browser test suite lives in `demo/test/browser/` and drives a real MapLibre instance through
 Playwright. See the README there for what it covers and why.

@@ -9,10 +9,10 @@ defmodule HoloMap.Layer do
         paint={%{fill_color: "#3b82f6", fill_opacity: 0.4}}
       />
 
-  Prefer the type-specific components — `HoloMap.Layer.Fill`,
+  Prefer the type-specific components: `HoloMap.Layer.Fill`,
   `HoloMap.Layer.Line`, `HoloMap.Layer.Circle`, `HoloMap.Layer.Symbol`,
   `HoloMap.Layer.Raster`, `HoloMap.Layer.Heatmap`, `HoloMap.Layer.Hillshade`,
-  `HoloMap.Layer.FillExtrusion` — which document the paint properties that
+  `HoloMap.Layer.FillExtrusion`. They document the paint properties that
   apply to them and reject a mismatched type at compile time. Reach for this
   one when the type is computed at runtime.
 
@@ -36,7 +36,7 @@ defmodule HoloMap.Layer do
 
   Layers stack in the order MapLibre received them, which is the order the
   components appear in the template. `before_id` overrides that when a layer
-  has to sit beneath one it is not written next to — a highlight layer under a
+  has to sit beneath one it is not written next to, such as a highlight layer under a
   label layer that belongs to the base style, for example.
 
   ## Events
@@ -45,7 +45,7 @@ defmodule HoloMap.Layer do
   `on_mouse_leave`, `on_mouse_move`, `on_mouse_down`, `on_mouse_up`,
   `on_touch_start`, `on_touch_end`.
 
-  Handlers receive `layer`, `lng_lat`, `point` and `features` — the features
+  Handlers receive `layer`, `lng_lat`, `point` and `features`, which holds the features
   under the pointer, each with `id`, `source`, `source_layer`, `properties` and
   `geometry`:
 

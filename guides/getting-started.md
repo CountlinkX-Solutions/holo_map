@@ -33,7 +33,7 @@ Three things are worth noticing.
 `cid` is the map's name everywhere: the DOM container, the browser registry, and
 the first argument to every `HoloMap.API` call. There is no second `id` prop.
 
-`style` is required — MapLibre cannot render without one. In production this is
+`style` is required, because MapLibre cannot render without one. In production this is
 your own tile server or a hosted style; `demotiles.maplibre.org` is a public
 world map that needs no key, which makes it useful for exactly this.
 
@@ -65,7 +65,7 @@ routinely feeds several layers:
 ```
 
 `data` is a plain Elixir map in GeoJSON shape. Build it wherever you build
-anything else — typically a command, since that is what runs on the server:
+anything else, typically a command, since that is what runs on the server:
 
 ```elixir
 def init(_params, component, _server) do
@@ -90,7 +90,7 @@ untouched.
 ## Property names
 
 Paint and layout properties may be written as Elixir atoms and are dasherized on
-the way out — `fill_color` becomes `"fill-color"`. String keys pass through
+the way out, so `fill_color` becomes `"fill-color"`. String keys pass through
 verbatim, which is the escape hatch for anything this library has not caught up
 with:
 
@@ -132,7 +132,7 @@ That reaches MapLibre as `setPaintProperty`. The layer is not rebuilt, the
 canvas is not touched, and nothing flickers. Changing `filter` likewise becomes
 `setFilter`.
 
-The same applies to visibility, zoom ranges, and the map's own camera — see
+The same applies to visibility, zoom ranges, and the map's own camera. See
 [Architecture](architecture.html) for which changes are cheap and which force a
 rebuild.
 
@@ -161,14 +161,14 @@ end
 
 `params.features` holds the features under the pointer, each with `id`,
 `source`, `source_layer`, `properties` and `geometry`. Every key arrives as an
-**atom**, nested ones included — so a GeoJSON property named `parcel_id` is
+**atom**, nested ones included, so a GeoJSON property named `parcel_id` is
 matched as `%{parcel_id: id}`, not `%{"parcel_id" => id}`. The full payload
 reference is in [Events](events.html).
 
 ## Icons
 
 `icon_image` on a symbol layer names an image; it does not fetch one. If the
-name is not in the style's own sprite — and plenty of styles ship none — nothing
+name is not in the style's own sprite, and plenty of styles ship none, nothing
 draws, and nothing reports why. Register your own with `HoloMap.Image`:
 
 ```elixir
@@ -202,7 +202,7 @@ state.
 ## Flying somewhere
 
 Setting `center` and `zoom` from state jumps the camera there. That is right
-when the camera reflects state, and wrong when it is a response to an event —
+when the camera reflects state, and wrong when it is a response to an event:
 re-rendering the same centre twice should not re-animate. For that, use the
 imperative API from inside an action:
 
@@ -218,7 +218,7 @@ for it.
 
 ## Where to go next
 
-- [Architecture](architecture.html) — how a prop change becomes a MapLibre call, and what that costs
-- [Events](events.html) — handler syntax, targets and every payload
-- [Limitations](limitations.html) — the things that do not work, and why
-- `HoloMap` — the component index, and every module's own docs
+- [Architecture](architecture.html): how a prop change becomes a MapLibre call, and what that costs
+- [Events](events.html): handler syntax, targets and every payload
+- [Limitations](limitations.html): the things that do not work, and why
+- `HoloMap`: the component index, and every module's own docs

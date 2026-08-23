@@ -42,7 +42,7 @@ defmodule HoloMap.Popup do
   > Hologram HTML-escapes literal text attributes before they ever reach a
   > component, so `html="<b>hi</b>"` written directly in a template
   > arrives as the *characters* `<b>hi</b>` and renders as visible text. Pass
-  > it as an expression instead — `html={@html}`, or a value from state —
+  > it as an expression instead (`html={@html}`, or a value from state)
   > and the markup survives. Slot content has no such caveat.
 
   ## Closing with the built-in button
@@ -50,7 +50,7 @@ defmodule HoloMap.Popup do
   MapLibre closes a popup on its own for three reasons: the close button, a
   click on the map (`close_on_click`, on by default) and a camera move
   (`close_on_move`). None of them go through your state, so without help the
-  component that rendered the popup still believes it is open — and clicking the
+  component that rendered the popup still believes it is open, and clicking the
   same thing again changes nothing, re-renders nothing, and the popup never
   comes back.
 
@@ -78,7 +78,7 @@ defmodule HoloMap.Popup do
   ## Events
 
   `on_open` fires when the popup is added to the map, `on_close` when it leaves
-  it — including every close MapLibre performs on its own. Neither carries a
+  it, including every close MapLibre performs on its own. Neither carries a
   payload.
 
   > #### Slot content is cloned {: .warning}

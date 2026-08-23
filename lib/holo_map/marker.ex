@@ -13,7 +13,7 @@ defmodule HoloMap.Marker do
   ## Markers versus symbol layers
 
   A marker is a DOM node. That makes it easy to style with your own CSS and
-  cheap to reason about, and expensive at scale — a few dozen is comfortable, a
+  cheap to reason about, and expensive at scale. A few dozen is comfortable, a
   few thousand is not. Past that, put the points in a
   `HoloMap.Source.GeoJSON` and draw them with `HoloMap.Layer.Circle` or
   `HoloMap.Layer.Symbol`, which render on the GPU. `HoloMap.Image` is what lets
@@ -43,13 +43,13 @@ defmodule HoloMap.Marker do
   > Hologram HTML-escapes literal text attributes before they ever reach a
   > component, so `popup_html="<b>hi</b>"` written directly in a template
   > arrives as the *characters* `<b>hi</b>` and renders as visible text. Pass
-  > it as an expression instead — `popup_html={@html}`, or a value from state —
+  > it as an expression instead (`popup_html={@html}`, or a value from state)
   > and the markup survives. Slot content has no such caveat.
 
   ## Events
 
   `on_click`, `on_drag_start`, `on_drag`, `on_drag_end`. Handlers receive
-  `lng_lat` — for the drag events, the position the marker has been moved to:
+  `lng_lat`, which for the drag events is the position the marker moved to:
 
       def action(:pin_moved, params, component) do
         [lng, lat] = params.lng_lat
@@ -65,7 +65,7 @@ defmodule HoloMap.Marker do
   way to keep a coordinate readout live. It looks like it should not be: each
   event is a state update, a re-render, and a `setLngLat` back into the marker
   MapLibre is in the middle of dragging. It works because the value going back
-  is the one MapLibre just reported, so the write is a no-op — the marker stays
+  is the one MapLibre just reported, so the write is a no-op. The marker stays
   locked to the cursor, measured at zero pixels of drift.
 
       <HoloMap.Marker id="pin" lng_lat={@pin} draggable
@@ -81,7 +81,7 @@ defmodule HoloMap.Marker do
   > it the node Hologram rendered would take that node out from under the
   > virtual DOM and corrupt the next patch, so `HoloMap` gives MapLibre a
   > **clone** instead. The markup renders and restyles normally, but Hologram
-  > event bindings inside the slot never fire — use `on_click` on the marker
+  > event bindings inside the slot never fire. Use `on_click` on the marker
   > itself. See the [Limitations guide](limitations.html).
   """
 

@@ -3,7 +3,7 @@ defmodule HoloMap.Layer.Base do
   The shared body of every layer component.
 
   MapLibre's eight layer types differ only in which paint and layout
-  properties they accept — the specification shape, the update rules and the
+  properties they accept. The specification shape, the update rules and the
   event surface are identical. Rather than repeat that eight times, each layer
   component is one `use` away from the whole thing:
 
@@ -15,7 +15,7 @@ defmodule HoloMap.Layer.Base do
 
   ## How the type is fixed
 
-  A type-specific component does not declare a `type` prop at all — the literal
+  A type-specific component does not declare a `type` prop at all. The literal
   is baked into its template when the macro expands. That is deliberate: a
   `values: ["fill"]` constraint would only be checked while rendering, and this
   way there is nothing to check, because there is no way to pass a type in.
@@ -26,8 +26,8 @@ defmodule HoloMap.Layer.Base do
   object. When a prop changes, the reconciler picks the narrowest update
   available: `setPaintProperty` for a paint change, `setLayoutProperty` for
   layout, `setFilter` for a filter, `setLayerZoomRange` for a zoom range. Only
-  a change to `type`, `source` or `source_layer` — none of which MapLibre can
-  change in place — forces a remove-and-re-add.
+  a change to `type`, `source` or `source_layer`, none of which MapLibre can
+  change in place, forces a remove-and-re-add.
   """
 
   @spec_keys [
@@ -46,7 +46,7 @@ defmodule HoloMap.Layer.Base do
 
   ## Options
 
-    * `:type` — the MapLibre layer type this component is locked to. When
+    * `:type`, the MapLibre layer type this component is locked to. When
       given, the type is a literal in the generated template and there is no
       `type` prop. When omitted, `type` becomes a required prop.
   """

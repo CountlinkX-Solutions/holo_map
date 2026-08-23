@@ -14,7 +14,7 @@ defmodule HoloMap.Control.Globe do
   | ---- | ---- | ----- |
   | `position` | string | Corner to place the control in. Default `"top-right"` |
 
-  The control takes no options of its own — MapLibre's `GlobeControl`
+  The control takes no options of its own, because MapLibre's `GlobeControl`
   constructor accepts none.
 
   ## When a globe helps
@@ -25,7 +25,7 @@ defmodule HoloMap.Control.Globe do
   readable. Past roughly zoom 6 the two are indistinguishable, so the control
   earns its place on world views and clutters a city map.
 
-  Pair it with `HoloMap.Control.Navigation` — a rotated globe is much easier to
+  Pair it with `HoloMap.Control.Navigation`. A rotated globe is much easier to
   reset with a compass than by dragging.
   """
 

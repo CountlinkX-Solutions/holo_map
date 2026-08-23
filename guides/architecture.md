@@ -6,13 +6,13 @@ Why `HoloMap` is built the way it is, and what that costs you.
 
 A map library needs three hooks from its framework:
 
-1. **Mount** — build a `maplibregl.Map` once the container is in the DOM.
-2. **Update** — push every prop change into that long-lived object.
-3. **Unmount** — call `map.remove()` and release the WebGL context.
+1. **Mount**: build a `maplibregl.Map` once the container is in the DOM.
+2. **Update**: push every prop change into that long-lived object.
+3. **Unmount**: call `map.remove()` and release the WebGL context.
 
 Hologram 0.11 offers one and a half. `init/2` and `init/3` run once per
 component instance, and `put_action/2` can schedule client-side work from there
-— that covers mount. There is no "props changed" hook and no unmount hook. And
+which covers mount. There is no "props changed" hook and no unmount hook. And
 JavaScript interop runs **only inside action handlers**: it is a no-op during
 server-side rendering and inside `init` itself.
 
@@ -100,7 +100,7 @@ apart means MapLibre's DOM and Hologram's DOM never contend for the same node.
 
 MapLibre will not accept `addSource` or `addLayer` before it has parsed a style,
 and a page renders its whole component tree before the first byte of style
-arrives. So style-scoped work — sources, layers, terrain, sky — is queued and
+arrives. So style-scoped work (sources, layers, terrain, sky) is queued and
 flushed on **`style.load`**.
 
 Not on `load`. MapLibre's `load` event also waits for the first complete render,
@@ -141,7 +141,7 @@ has to account for that, and `HoloMap` learned both the hard way.
 **Definitions must be matched by ownership, not containment.** During a
 navigation the outgoing map's definition elements briefly carry the incoming
 page's values. A reconciler trusting containment reads that as prop changes on a
-live map — moving its camera, and dispatching the resulting `moveend` through
+live map, moving its camera and dispatching the resulting `moveend` through
 `Hologram.dispatchAction`, which is deferred and therefore lands on whichever
 page is mounted by then. That surfaced as `FunctionClauseError` in the
 *destination* page's `action/3`. Hence `data-hm-map`, and hence camera moves the
@@ -160,8 +160,8 @@ Two suites, because the library has two halves:
 - `mix test` covers everything that builds JSON. Component tests render through
   Hologram's own renderer and assert on the attributes each component emits.
 - `demo/test/browser/` drives a real MapLibre instance through Playwright and
-  asserts on what MapLibre actually built — `getLayer`, `getPaintProperty`,
-  `getFilter` — reached through `window.HoloMap.map/1`.
+  asserts on what MapLibre actually built, through `getLayer`,
+  `getPaintProperty` and `getFilter`, reached via `window.HoloMap.map/1`.
 
 The split is forced: Hologram's JS interop is a no-op on the server, so no
 amount of ExUnit reaches `runtime.mjs`. Both navigation bugs above were found by

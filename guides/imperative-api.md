@@ -61,13 +61,13 @@ HoloMap.API.resize("explorer")
 
 `fly_to/2` arcs out and back in, which reads well over long distances.
 `ease_to/2` travels in a straight line, which reads better over short ones.
-`jump_to/2` does not animate — the same thing a `center` prop change does.
+`jump_to/2` does not animate, which is what a `center` prop change does.
 
 `fit_bounds/3` accepts any shape `HoloMap.Spec.bounds/1` understands: a pair of
 corners, or a flat `[west, south, east, north]` list.
 
 `resize/1` is only needed when the container changes size without a resize event
-the browser reports — a CSS transition on a sidebar, for instance. MapLibre
+the browser reports, such as a CSS transition on a sidebar. MapLibre
 watches its container otherwise.
 
 ## Layers
@@ -82,7 +82,7 @@ Property names may be atoms in Elixir style or MapLibre specification names;
 both reach MapLibre as the latter.
 
 These duplicate what the `paint`, `layout` and `filter` props already do, and in
-almost every case the props are the better choice — they survive a re-render.
+almost every case the props are the better choice, because they survive a re-render.
 Reach here for something genuinely transient.
 
 ## Feature state
@@ -97,7 +97,7 @@ HoloMap.API.remove_feature_state("explorer", %{source: "parcels", id: 12})
 ```
 
 Add `:source_layer` for a vector source. Every feature needs an id, which GeoJSON
-features often lack — set `generate_id` on the source, or point `promote_id` at
+features often lack. Set `generate_id` on the source, or point `promote_id` at
 a property that is already unique. There is a worked example in
 [Events](events.html).
 
@@ -110,11 +110,11 @@ HoloMap.Runtime.call("explorer", "setRenderWorldCopies", [false])
 ```
 
 It queues against style readiness like everything else, but it does not
-normalise its arguments — they are passed to MapLibre as given.
+normalise its arguments. They are passed to MapLibre as given.
 
 ## From JavaScript
 
-A MapLibre plugin — a draw control, a geocoder, a deck.gl overlay — needs the
+A MapLibre plugin (a draw control, a geocoder, a deck.gl overlay) needs the
 raw map object, and Hologram's interop cannot hand one to a third-party script.
 Every booted map is published on `window`:
 

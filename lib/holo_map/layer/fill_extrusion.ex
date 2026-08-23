@@ -1,9 +1,9 @@
 defmodule HoloMap.Layer.FillExtrusion do
   @moduledoc """
-  Extruded polygons — the standard way to draw 3D buildings.
+  Extruded polygons, the standard way to draw 3D buildings.
 
   A `HoloMap.Layer` locked to `type: "fill-extrusion"`. See that module for the full
-  prop list, ordering rules and event payloads — everything here is identical
+  prop list, ordering rules and event payloads. Everything here is identical
   apart from the layer type, which is fixed and cannot be overridden.
 
   ## Paint properties

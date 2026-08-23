@@ -15,7 +15,7 @@ defmodule HoloMap do
       </HoloMap.Map>
 
   Children are **stateless** components. They hold no state, run no actions and
-  make no JavaScript calls — each one renders a single hidden marker element
+  make no JavaScript calls. Each one renders a single hidden marker element
   carrying its specification. A reconciler running inside the browser watches
   those elements and translates every addition, removal and attribute change
   into the matching MapLibre call. See `HoloMap.Runtime` and the
@@ -42,7 +42,7 @@ defmodule HoloMap do
 
   ## Installation
 
-  `HoloMap` cannot ship its own npm dependency — Hologram resolves bare import
+  `HoloMap` cannot ship its own npm dependency, because Hologram resolves bare import
   specifiers against the *host application's* `assets/package.json`. Installing
   `maplibre-gl` and its stylesheet is a step you perform once per application,
   described in the [Installation guide](installation.html).

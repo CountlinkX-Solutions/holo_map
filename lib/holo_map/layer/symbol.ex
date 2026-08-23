@@ -3,7 +3,7 @@ defmodule HoloMap.Layer.Symbol do
   Icons and text labels.
 
   A `HoloMap.Layer` locked to `type: "symbol"`. See that module for the full
-  prop list, ordering rules and event payloads — everything here is identical
+  prop list, ordering rules and event payloads. Everything here is identical
   apart from the layer type, which is fixed and cannot be overridden.
 
   ## Paint properties
@@ -15,7 +15,7 @@ defmodule HoloMap.Layer.Symbol do
   `text_field`, `text_font`, `text_size`, `text_anchor`, `text_offset`, `text_allow_overlap`, `text_ignore_placement`, `icon_image`, `icon_size`, `icon_anchor`, `icon_allow_overlap`, `symbol_placement`, `symbol_spacing`, `symbol_sort_key`, `visibility`.
 
   `icon_image` names an image, it does not fetch one. The name must exist in the
-  style's own sprite, or be registered with `HoloMap.Image` — naming one that
+  style's own sprite, or be registered with `HoloMap.Image`. Naming one that
   exists in neither draws nothing and reports no error.
 
   Property names may be written as atoms in Elixir style (`:fill_color`) or as

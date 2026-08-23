@@ -9,9 +9,9 @@ defmodule HoloMap.Spec do
   rule would get one of those groups wrong, so this module keeps two distinct
   paths:
 
-    * `dasherize/1` — for paint and layout maps, where underscore-to-hyphen is
+    * `dasherize/1`, for paint and layout maps, where underscore-to-hyphen is
       genuinely the universal rule.
-    * `take/2` — for everything else, where each prop is mapped to its exact
+    * `take/2`, for everything else, where each prop is mapped to its exact
       specification key through an explicit table declared by the component.
 
   Both paths drop `nil` values instead of emitting `null`. MapLibre treats an
@@ -166,7 +166,7 @@ defmodule HoloMap.Spec do
   @doc """
   Coerces a boolean prop written as a bare attribute.
 
-  In a HOLO template a bare attribute is an empty *string*, not `true` — so
+  In a HOLO template a bare attribute is an empty *string*, not `true`, so
   `<HoloMap.Source.GeoJSON cluster />` would otherwise hand MapLibre `""` and
   fail style validation with `boolean expected, string found`. Writing the
   attribute at all means "on", which is what every component framework's bare

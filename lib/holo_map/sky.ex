@@ -12,16 +12,16 @@ defmodule HoloMap.Sky do
   | Prop | Type | Notes |
   | ---- | ---- | ----- |
   | `sky_color` | color | Colour at the top of the sky |
-  | `sky_horizon_blend` | number | 0–1. How far down the sky colour reaches |
+  | `sky_horizon_blend` | number | 0-1. How far down the sky colour reaches |
   | `horizon_color` | color | Colour at the horizon line |
-  | `horizon_fog_blend` | number | 0–1. Blend between horizon and fog |
+  | `horizon_fog_blend` | number | 0-1. Blend between horizon and fog |
   | `fog_color` | color | Colour of the fog over the ground |
-  | `fog_ground_blend` | number | 0–1. How far up from the ground fog reaches |
-  | `atmosphere_blend` | number | 0–1, or an expression. Overall opacity |
+  | `fog_ground_blend` | number | 0-1. How far up from the ground fog reaches |
+  | `atmosphere_blend` | number | 0-1, or an expression. Overall opacity |
   | `properties` | map | Any further sky properties, merged last |
 
   Every prop accepts a MapLibre expression as well as a literal, which is how
-  a sky follows the camera — fading the atmosphere in as the map tilts:
+  a sky follows the camera, fading the atmosphere in as the map tilts:
 
       <HoloMap.Sky
         atmosphere_blend={["interpolate", ["linear"], ["zoom"], 0, 1, 12, 0]}
@@ -30,7 +30,7 @@ defmodule HoloMap.Sky do
   ## Visibility
 
   The sky is only drawn where the horizon is on screen, which means a pitched
-  camera. On a top-down map it renders nothing at all — that is not a
+  camera. On a top-down map it renders nothing at all, which is not a
   misconfiguration, there is simply no horizon in view.
   """
 

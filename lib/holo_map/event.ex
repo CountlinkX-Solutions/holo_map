@@ -7,7 +7,7 @@ defmodule HoloMap.Event do
   props therefore accept the same shapes Hologram's own longhand event bindings
   do, so there is one syntax to remember:
 
-      # Bare action name — dispatched to the page.
+      # Bare action name, dispatched to the page.
       on_click={:parcel_clicked}
 
       # Longhand, when the handler lives on a component rather than the page.
@@ -21,8 +21,8 @@ defmodule HoloMap.Event do
   ## Why the default target is the page
 
   Hologram defaults an event binding to the closest enclosing *stateful*
-  component. `HoloMap`'s children are deliberately stateless — they have no
-  `cid` of their own — so there is no such component to fall back on, and
+  component. `HoloMap`'s children are deliberately stateless, with no
+  `cid` of their own, so there is no such component to fall back on, and
   silently targeting the map container would send the action to `HoloMap.Map`
   rather than to the caller's handler. `"page"` is both the common case and the
   one target that always exists.
