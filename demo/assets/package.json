@@ -1,0 +1,8 @@
+{
+  "name": "holo-map-demo-assets",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "maplibre-gl": "^6.5.0"
+  }
+}
