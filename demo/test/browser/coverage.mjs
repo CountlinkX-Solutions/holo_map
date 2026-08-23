@@ -45,10 +45,10 @@ const inspect = (cid, fn) => page.evaluate(({ cid, body }) => {
 await open("/vector", "vector");
 let r = await inspect("vector", (map) => ({
   source: map.getSource("demo")?.type ?? null,
-  fill: map.getLayer("countries-fill")?.type ?? null,
-  line: map.getLayer("countries-outline")?.type ?? null,
-  sourceLayer: map.getStyle().layers.find((l) => l.id === "countries-fill")?.["source-layer"] ?? null,
-  lineCap: map.getLayoutProperty("countries-outline", "line-cap"),
+  fill: map.getLayer("demo-fill")?.type ?? null,
+  line: map.getLayer("demo-outline")?.type ?? null,
+  sourceLayer: map.getStyle().layers.find((l) => l.id === "demo-fill")?.["source-layer"] ?? null,
+  lineCap: map.getLayoutProperty("demo-outline", "line-cap"),
 }));
 record("vector: HoloMap.Source.Vector reached MapLibre", r.source === "vector", String(r.source));
 record("vector: HoloMap.Layer.Fill reached MapLibre", r.fill === "fill", String(r.fill));
@@ -79,29 +79,46 @@ await page.waitForTimeout(2000);
 record("vector: and switched it back to mercator",
   (await inspect("vector", (map) => map.getProjection?.()?.type ?? "mercator")) === "mercator");
 
+// Asserting that the filter *reached* the layer is not enough: a filter naming
+// a property the tiles do not carry reaches the layer perfectly and hides
+// every feature. The count is what proves it filtered rather than emptied.
+const drawn = () => inspect("vector", (map) => map.queryRenderedFeatures({ layers: ["demo-fill"] }).length);
+
+const unfiltered = await drawn();
+record("vector: the fill layer draws features to begin with", unfiltered > 20, `${unfiltered} drawn`);
+
 await page.getByRole("button", { name: "Filter to Europe" }).click();
-await page.waitForTimeout(900);
+await page.waitForTimeout(1500);
+const filtered = await drawn();
 record("vector: filter change reached the live layer",
-  JSON.stringify(await inspect("vector", (map) => map.getFilter("countries-fill"))) ===
-    JSON.stringify(["==", ["get", "REGION_UN"], "Europe"]));
+  JSON.stringify(await inspect("vector", (map) => map.getFilter("demo-fill"))) ===
+    JSON.stringify(["==", ["get", "CONTINENT"], "Europe"]));
+record("vector: the filter narrowed the map instead of emptying it",
+  filtered > 0 && filtered < unfiltered, `${filtered} of ${unfiltered} drawn`);
+
+await page.getByRole("button", { name: "Show all countries" }).click();
+await page.waitForTimeout(1200);
 
 // The imperative API duplicates what props already do, so it needs its own
 // coverage: a wrong MapLibre method name is a silent no-op otherwise.
 await page.getByRole("button", { name: "Flash amber (imperative)" }).click();
 await page.waitForTimeout(700);
 record("vector: HoloMap.API.set_paint_property reached the layer",
-  (await inspect("vector", (map) => map.getPaintProperty("countries-fill", "fill-color"))) === "#b45309");
+  (await inspect("vector", (map) => map.getPaintProperty("demo-fill", "fill-color"))) === "#b45309");
 
 await page.getByRole("button", { name: "Hide outline (imperative)" }).click();
 await page.waitForTimeout(700);
 record("vector: HoloMap.API.set_layout_property reached the layer",
-  (await inspect("vector", (map) => map.getLayoutProperty("countries-outline", "visibility"))) === "none");
+  (await inspect("vector", (map) => map.getLayoutProperty("demo-outline", "visibility"))) === "none");
 
 await page.getByRole("button", { name: "Filter to Asia (imperative)" }).click();
-await page.waitForTimeout(700);
+await page.waitForTimeout(1500);
 record("vector: HoloMap.API.set_filter reached the layer",
-  JSON.stringify(await inspect("vector", (map) => map.getFilter("countries-fill")))
-    === JSON.stringify(["==", ["get", "REGION_UN"], "Asia"]));
+  JSON.stringify(await inspect("vector", (map) => map.getFilter("demo-fill")))
+    === JSON.stringify(["==", ["get", "CONTINENT"], "Asia"]));
+const asian = await drawn();
+record("vector: the imperative filter also narrowed rather than emptied",
+  asian > 0 && asian < unfiltered, `${asian} drawn`);
 
 // A style swap wipes every source and layer; the reconciler must put back the
 // ones it owns once the new style loads.
@@ -111,7 +128,12 @@ record("vector: HoloMap.API.set_style replaced the style",
   (await inspect("vector", (map) => map.getStyle().layers.length)) > 3);
 record("vector: the reconciler re-declared its own layers after the swap",
   await inspect("vector", (map) =>
-    Boolean(map.getSource("demo") && map.getLayer("countries-fill") && map.getLayer("countries-outline"))));
+    Boolean(map.getSource("demo") && map.getLayer("demo-fill") && map.getLayer("demo-outline"))));
+// The incoming style carries layers of its own. If an id collided, the
+// component would end up driving the style's layer instead of its own.
+record("vector: the re-declared layer is the component's, not the new style's",
+  (await inspect("vector", (map) => map.getPaintProperty("demo-fill", "fill-color"))) === "#334155",
+  String(await inspect("vector", (map) => map.getPaintProperty("demo-fill", "fill-color"))).slice(0, 40));
 
 // --- raster source, image source, raster layers -----------------------------
 await open("/raster", "raster");

@@ -27,6 +27,10 @@ defmodule Demo.VectorPage do
       cannot guess which one is meant.
     </p>
     <p>
+      The layer ids here are prefixed. Swapping to a style that happens to use the same id for a
+      layer of its own would leave two claimants for one name, and MapLibre only keeps one.
+    </p>
+    <p>
       The style below is an inline map rather than a URL, which is all a style has to be: a
       background layer and nothing else. Everything you see on top of it comes from the
       components.
@@ -69,7 +73,7 @@ defmodule Demo.VectorPage do
       <HoloMap.Source.Vector id="demo" url={@tiles} max_zoom={5} />
 
       <HoloMap.Layer.Fill
-        id="countries-fill"
+        id="demo-fill"
         source="demo"
         source_layer="countries"
         filter={Demo.VectorPage.europe_filter(@filter_europe)}
@@ -77,7 +81,7 @@ defmodule Demo.VectorPage do
       />
 
       <HoloMap.Layer.Line
-        id="countries-outline"
+        id="demo-outline"
         source="demo"
         source_layer="countries"
         layout={%{line_cap: "round", line_join: "round"}}
@@ -101,7 +105,7 @@ defmodule Demo.VectorPage do
 
   @doc false
   def europe_filter(false), do: nil
-  def europe_filter(true), do: ["==", ["get", "REGION_UN"], "Europe"]
+  def europe_filter(true), do: ["==", ["get", "CONTINENT"], "Europe"]
 
   def action(:toggle_filter, _params, component) do
     put_state(component, :filter_europe, !component.state.filter_europe)
@@ -112,17 +116,17 @@ defmodule Demo.VectorPage do
   end
 
   def action(:flash_paint, _params, component) do
-    HoloMap.API.set_paint_property("vector", "countries-fill", :fill_color, "#b45309")
+    HoloMap.API.set_paint_property("vector", "demo-fill", :fill_color, "#b45309")
     put_state(component, :last, "set_paint_property")
   end
 
   def action(:hide_outline, _params, component) do
-    HoloMap.API.set_layout_property("vector", "countries-outline", :visibility, "none")
+    HoloMap.API.set_layout_property("vector", "demo-outline", :visibility, "none")
     put_state(component, :last, "set_layout_property")
   end
 
   def action(:filter_asia, _params, component) do
-    HoloMap.API.set_filter("vector", "countries-fill", ["==", ["get", "REGION_UN"], "Asia"])
+    HoloMap.API.set_filter("vector", "demo-fill", ["==", ["get", "CONTINENT"], "Asia"])
     put_state(component, :last, "set_filter")
   end
 
