@@ -31,6 +31,10 @@ defmodule Demo.VectorPage do
       background layer and nothing else. Everything you see on top of it comes from the
       components.
     </p>
+    <p>
+      The globe button switches the projection. Mercator inflates everything far from the
+      equator, which is the wrong story for a world view — press it and the distortion goes.
+    </p>
 
     <div class="controls">
       <button $click={:toggle_filter}>{Demo.VectorPage.filter_label(@filter_europe)}</button>
@@ -81,6 +85,7 @@ defmodule Demo.VectorPage do
       />
 
       <HoloMap.Control.Navigation position="top-right" />
+      <HoloMap.Control.Globe position="top-right" />
       <HoloMap.Control.Attribution
         position="bottom-right"
         compact

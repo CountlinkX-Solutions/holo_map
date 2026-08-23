@@ -17,7 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for a type decided at runtime.
 - Overlays: `HoloMap.Marker` and `HoloMap.Popup`, both accepting slot content.
 - Controls: `HoloMap.Control.Navigation`, `.Scale`, `.Geolocate`, `.Fullscreen`,
-  `.Attribution`.
+  `.Attribution`, plus `.Globe` and `.Terrain`, both new in MapLibre GL JS 6.
 - 3D: `HoloMap.Terrain` and `HoloMap.Sky`.
 - `HoloMap.API` — `fly_to/2`, `ease_to/2`, `jump_to/2`, `fit_bounds/3`,
   `resize/1`, `set_style/2`, `set_filter/3`, `set_paint_property/4`,

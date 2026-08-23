@@ -57,6 +57,27 @@ record("vector: source_layer arrived as \"source-layer\"", r.sourceLayer === "co
 record("vector: layout props dasherized (line_cap)", r.lineCap === "round", String(r.lineCap));
 record("vector: HoloMap.Control.Attribution attached",
   (await page.locator(".maplibregl-ctrl-attrib").count()) > 0);
+record("vector: exactly one attribution control, not two",
+  (await page.locator(".maplibregl-ctrl-attrib").count()) === 1);
+
+// GlobeControl is new in MapLibre 6 and takes no options of its own.
+//
+// Its button swaps class between `maplibregl-ctrl-globe` and
+// `-globe-enabled` as the projection changes, so it is addressed by a
+// substring rather than by either exact class.
+const globeButton = page.locator("button[class*=maplibregl-ctrl-globe]");
+
+record("vector: HoloMap.Control.Globe attached", (await globeButton.count()) === 1);
+
+await globeButton.click();
+await page.waitForTimeout(2500);
+record("vector: the globe button switched the projection to a globe",
+  (await inspect("vector", (map) => map.getProjection?.()?.type ?? "mercator")) === "globe");
+
+await globeButton.click();
+await page.waitForTimeout(2000);
+record("vector: and switched it back to mercator",
+  (await inspect("vector", (map) => map.getProjection?.()?.type ?? "mercator")) === "mercator");
 
 await page.getByRole("button", { name: "Filter to Europe" }).click();
 await page.waitForTimeout(900);
@@ -146,6 +167,11 @@ record("heatmap: HoloMap.Control.Geolocate attached",
 
 // --- raster-dem source, terrain, hillshade, sky ------------------------------
 await open("/terrain", "relief");
+await page.waitForFunction(() => window.HoloMap.map("user-relief"), null, { timeout: 30000 });
+await page.waitForTimeout(4000);
+
+record("terrain: the declared map and the user-controlled map both run",
+  (await page.evaluate(() => window.HoloMap.cids().sort().join(","))) === "relief,user-relief");
 r = await inspect("relief", (map) => ({
   dem: map.getSource("dem")?.type ?? null,
   encoding: map.getStyle().sources.dem.encoding,
@@ -177,6 +203,21 @@ await page.getByRole("button", { name: "Hide hillshade" }).click();
 await page.waitForTimeout(900);
 record("terrain: removing the Hillshade component removed the layer",
   (await inspect("relief", (map) => map.getLayer("relief-shade") ?? null)) === null);
+
+// HoloMap.Control.Terrain is the opposite of HoloMap.Terrain: the map starts
+// flat and the user decides. Its button swaps class the way the globe's does.
+record("terrain: HoloMap.Control.Terrain starts flat",
+  (await inspect("user-relief", (map) => map.getTerrain())) == null);
+
+await page.locator("#hm--user-relief").scrollIntoViewIfNeeded();
+await page.locator("button[class*=maplibregl-ctrl-terrain]").last().click();
+await page.waitForTimeout(3000);
+// Compared field by field: JSON.stringify preserves insertion order, and
+// MapLibre returns the keys in its own.
+const userTerrain = await inspect("user-relief", (map) => map.getTerrain());
+record("terrain: the button turned terrain on with the declared exaggeration",
+  userTerrain?.source === "dem" && userTerrain?.exaggeration === 1.5,
+  JSON.stringify(userTerrain));
 
 // --- fill-extrusion, over a basemap, and two maps on one page --------------
 await page.goto(BASE + "/extrusion", { waitUntil: "domcontentloaded" });

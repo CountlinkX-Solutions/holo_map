@@ -79,3 +79,75 @@ defmodule HoloMap.ControlTest do
     end
   end
 end
+
+defmodule HoloMap.NewControlTest do
+  use HoloMap.RenderCase, async: true
+
+  describe "Globe" do
+    test "carries no options beyond its position" do
+      html = render_def(HoloMap.Control.Globe, position: "bottom-left")
+
+      assert spec_for(html, "control:globe:bottom-left") == %{
+               "control" => "globe",
+               "position" => "bottom-left"
+             }
+    end
+
+    test "defaults to the top-right corner" do
+      html = render_def(HoloMap.Control.Globe, [])
+
+      assert spec_for(html, "control:globe:top-right")["control"] == "globe"
+    end
+  end
+
+  describe "Terrain" do
+    test "carries the DEM source and exaggeration" do
+      html = render_def(HoloMap.Control.Terrain, source: "dem", exaggeration: 1.5)
+
+      assert spec_for(html, "control:terrain:top-right") == %{
+               "control" => "terrain",
+               "position" => "top-right",
+               "source" => "dem",
+               "exaggeration" => 1.5
+             }
+    end
+
+    test "omits exaggeration when unset" do
+      spec =
+        spec_for(render_def(HoloMap.Control.Terrain, source: "dem"), "control:terrain:top-right")
+
+      refute Map.has_key?(spec, "exaggeration")
+    end
+
+    test "requires a source, since MapLibre's constructor does" do
+      # A missing `required:` prop surfaces as a KeyError from the template's
+      # variable lookup, not as Hologram.PropError. Hologram catches it at
+      # compile time for a literal call site in a template; reached any other
+      # way — a spread, a dynamic tag, a programmatic render like this one —
+      # this is the shape the failure takes.
+      assert_raise KeyError, ~r/key :source not found/, fn ->
+        render_def(HoloMap.Control.Terrain, [])
+      end
+    end
+  end
+
+  test "both reject an invalid position by name" do
+    assert_raise ArgumentError, ~r/invalid position "middle" for the globe control/, fn ->
+      render_def(HoloMap.Control.Globe, position: "middle")
+    end
+
+    assert_raise ArgumentError, ~r/invalid position "middle" for the terrain control/, fn ->
+      render_def(HoloMap.Control.Terrain, source: "dem", position: "middle")
+    end
+  end
+
+  test "both require a surrounding map" do
+    assert_raise ArgumentError, ~r/outside a <HoloMap.Map>/, fn ->
+      render(HoloMap.Control.Globe, [])
+    end
+
+    assert_raise ArgumentError, ~r/outside a <HoloMap.Map>/, fn ->
+      render(HoloMap.Control.Terrain, source: "dem")
+    end
+  end
+end

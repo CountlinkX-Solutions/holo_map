@@ -41,7 +41,7 @@ flickers, and there is no JavaScript in your application.
 | Sources | `GeoJSON`, `Vector`, `Raster`, `RasterDEM`, `Image` |
 | Layers | `Fill`, `Line`, `Circle`, `Symbol`, `Raster`, `Heatmap`, `Hillshade`, `FillExtrusion`, plus a generic `Layer` |
 | Overlays | `Marker`, `Popup` |
-| Controls | `Navigation`, `Scale`, `Geolocate`, `Fullscreen`, `Attribution` |
+| Controls | `Navigation`, `Scale`, `Geolocate`, `Fullscreen`, `Attribution`, `Globe`, `Terrain` |
 | 3D | `Terrain`, `Sky` |
 | Imperative | `HoloMap.API` — `fly_to/2`, `fit_bounds/3`, `set_feature_state/3`, … |
 

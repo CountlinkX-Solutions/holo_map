@@ -45,6 +45,7 @@ defmodule HoloMap.MixProject do
   defp package do
     [
       licenses: ["MIT"],
+      maintainers: ["Yendris Rogelio Cruz Mendoza"],
       links: %{
         "GitHub" => @source_url,
         "MapLibre GL JS" => "https://maplibre.org/maplibre-gl-js/docs/"

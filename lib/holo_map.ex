@@ -33,7 +33,7 @@ defmodule HoloMap do
   | Sources | `HoloMap.Source.GeoJSON`, `HoloMap.Source.Vector`, `HoloMap.Source.Raster`, `HoloMap.Source.RasterDEM`, `HoloMap.Source.Image` |
   | Layers | `HoloMap.Layer` (generic), `HoloMap.Layer.Fill`, `HoloMap.Layer.Line`, `HoloMap.Layer.Circle`, `HoloMap.Layer.Symbol`, `HoloMap.Layer.Raster`, `HoloMap.Layer.Heatmap`, `HoloMap.Layer.Hillshade`, `HoloMap.Layer.FillExtrusion` |
   | Overlays | `HoloMap.Marker`, `HoloMap.Popup` |
-  | Controls | `HoloMap.Control.Navigation`, `HoloMap.Control.Scale`, `HoloMap.Control.Geolocate`, `HoloMap.Control.Fullscreen`, `HoloMap.Control.Attribution` |
+  | Controls | `HoloMap.Control.Navigation`, `HoloMap.Control.Scale`, `HoloMap.Control.Geolocate`, `HoloMap.Control.Fullscreen`, `HoloMap.Control.Attribution`, `HoloMap.Control.Globe`, `HoloMap.Control.Terrain` |
   | 3D | `HoloMap.Terrain`, `HoloMap.Sky` |
 
   For one-off camera moves and property tweaks that don't belong in state, see

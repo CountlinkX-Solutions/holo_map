@@ -18,6 +18,8 @@ defmodule HoloMap.Control do
     * `HoloMap.Control.Geolocate` — locate and follow the user
     * `HoloMap.Control.Fullscreen` — expand the map to fill the screen
     * `HoloMap.Control.Attribution` — data attribution
+    * `HoloMap.Control.Globe` — switch between mercator and a globe
+    * `HoloMap.Control.Terrain` — let the user toggle 3D terrain
 
   ## Attribution
 

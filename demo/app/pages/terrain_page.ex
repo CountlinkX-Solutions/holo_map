@@ -88,6 +88,33 @@ defmodule Demo.TerrainPage do
       <HoloMap.Control.Navigation position="top-right" visualize_pitch />
       <HoloMap.Control.Attribution position="bottom-right" compact />
     </HoloMap.Map>
+
+    <h2>Letting the user decide instead</h2>
+    <p>
+      The map above declares terrain: while <code>HoloMap.Terrain</code> is rendered, terrain is
+      on, and the application decides. <code>HoloMap.Control.Terrain</code> is the opposite — it
+      starts flat and hands the decision to the user as a button. Rendering both would put them
+      in conflict, so this is a separate map.
+    </p>
+
+    <HoloMap.Map
+      cid="user-relief"
+      style={@style}
+      center={{11.39, 47.27}}
+      zoom={11}
+      pitch={65}
+      max_pitch={85}
+      bearing={20}
+      height="420px"
+      class="map"
+      attribution_control={false}
+    >
+      <HoloMap.Source.RasterDEM id="dem" url={@dem} encoding="terrarium" />
+
+      <HoloMap.Control.Terrain source="dem" exaggeration={1.5} position="top-right" />
+      <HoloMap.Control.Navigation position="top-right" visualize_pitch />
+      <HoloMap.Control.Attribution position="bottom-right" compact />
+    </HoloMap.Map>
     """
   end
 
