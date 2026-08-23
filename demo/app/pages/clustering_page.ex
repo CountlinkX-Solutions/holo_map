@@ -23,6 +23,10 @@ defmodule Demo.ClusteringPage do
       radius is a structural change to the source, so the reconciler detaches these layers,
       rebuilds the source and puts them back. Watch them survive it.
     </p>
+    <p>
+      The opening zoom shows both layers at once. Zoom out and everything gathers into clusters;
+      zoom in and they break apart into single points.
+    </p>
 
     <div class="controls">
       <button $click={:set_radius, radius: 30}>Radius 30</button>
@@ -31,7 +35,7 @@ defmodule Demo.ClusteringPage do
       <span>radius: {@radius}</span>
     </div>
 
-    <HoloMap.Map cid="clusters" style={@style} center={{-70.0, 19.0}} zoom={7}
+    <HoloMap.Map cid="clusters" style={@style} center={{-70.0, 19.0}} zoom={10}
                  height="480px" class="map">
       <HoloMap.Source.GeoJSON
         id="points"

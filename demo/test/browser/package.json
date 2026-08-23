@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node components.mjs && node coverage.mjs && node navigation.mjs && node accessibility.mjs"
+    "test": "node components.mjs && node coverage.mjs && node layers.mjs && node navigation.mjs && node accessibility.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.13.0",

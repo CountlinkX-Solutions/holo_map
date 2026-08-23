@@ -53,6 +53,12 @@ GeoJSON source and its layers reaching MapLibre; a paint change arriving as
 clustered source surviving a structural rebuild with its three layers re-added;
 `HoloMap.API.fly_to/2`; and teardown releasing the WebGL context.
 
+`layers.mjs` asks whether every declared layer actually draws something. It
+exists because of a bug the other suites could not see: a filter naming a
+property the tiles did not carry. The expression reached the layer exactly as
+written, every assertion passed, and the layer rendered nothing. Checking that a
+value arrived is not the same as checking that it did anything.
+
 `accessibility.mjs` covers every page in both colour schemes, audited with axe-core
 against WCAG 2 A and AA. Contrast is the reason this is a tool and not a
 calculation: Tailwind v4 emits `oklch()`, which a hand-written luminance
