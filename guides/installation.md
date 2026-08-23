@@ -149,7 +149,21 @@ end
 ```
 
 It has to run *after* the Hologram compiler, which rewrites
-`priv/static/hologram` on every build.
+`priv/static/hologram` on every build — and in `dev`/`test` that compiler is a
+no-op unless `HOLOGRAM_START=1` is set. `mix holo` sets it, but `mix holo`
+starts the server and never returns, so a gzip step ordered after it never
+runs and one ordered before it compresses the *previous* build. Force the
+compile yourself, then compress:
+
+```elixir
+defp build_bundles(_args) do
+  System.put_env("HOLOGRAM_START", "1")
+  Mix.Task.rerun("compile")
+end
+```
+
+Hologram does not delete a superseded bundle, so old `.gz` files linger next to
+bundles that no longer exist; clean the orphans in the same step.
 
 ### Cache them forever
 

@@ -27,7 +27,7 @@ defmodule Demo.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "assets.install", "compile", "assets.copy"],
+      setup: ["deps.get", "assets.install", "assets.build", "assets.copy", "assets.gzip"],
       # Hologram npm-installs its own assets/package.json, never the host
       # application's — it only puts assets/node_modules on esbuild's NODE_PATH.
       # Installing maplibre-gl is therefore this app's job.
@@ -36,11 +36,25 @@ defmodule Demo.MixProject do
       # owns are two stylesheets, one of which npm put in node_modules during
       # compilation — so this runs after compile, not before.
       "assets.copy": &copy_static_assets/1,
-      server: ["assets.install", "compile", "assets.copy", "assets.gzip", "holo"],
+      # `mix holo` starts the server and never returns, so everything that has to
+      # touch the bundles must run before it — and the bundles only exist after a
+      # compile with the Hologram compiler enabled, which `assets.build` forces.
+      # Ordering gzip before that step compresses the *previous* build and leaves
+      # the new one uncompressed.
+      server: ["assets.install", "assets.build", "assets.copy", "assets.gzip", "holo"],
+      "assets.build": &build_bundles/1,
       # Pre-compression has to run after the Hologram compiler, which rewrites
       # priv/static/hologram on every build.
       "assets.gzip": &gzip_static_assets/1
     ]
+  end
+
+  # In dev and test the Hologram compiler is a no-op unless HOLOGRAM_START is
+  # set — `mix holo` sets it, but by then it is too late for any task that needs
+  # the bundles on disk.
+  defp build_bundles(_args) do
+    System.put_env("HOLOGRAM_START", "1")
+    Mix.Task.rerun("compile")
   end
 
   defp install_npm_deps(_args) do
@@ -52,6 +66,13 @@ defmodule Demo.MixProject do
   end
 
   defp gzip_static_assets(_args) do
+    # Hologram never deletes a superseded bundle, so its .gz would linger and
+    # accumulate alongside it.
+    for orphan <- Path.wildcard("priv/static/hologram/*.gz"),
+        not File.exists?(String.replace_suffix(orphan, ".gz", "")) do
+      File.rm!(orphan)
+    end
+
     paths =
       Path.wildcard("priv/static/hologram/*.{js,map}") ++
         Path.wildcard("priv/static/assets/*.{js,css,mjs}")
