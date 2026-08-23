@@ -13,8 +13,10 @@ defmodule HoloMap.Control.Geolocate do
   | `show_user_location` | boolean | Draw a dot at the users position. Default true |
   | `show_accuracy_circle` | boolean | Draw the accuracy radius. Default true |
   | `show_user_heading` | boolean | Draw a heading arrow on the dot |
-  | `position_options` | map | Passed to the browser Geolocation API: `enableHighAccuracy`, `timeout`, `maximumAge` |
+  | `position_options` | map | Passed to the browser Geolocation API |
   | `fit_bounds_options` | map | Camera options used when zooming to the user |
+
+  `position_options` takes `enableHighAccuracy`, `timeout` and `maximumAge`.
 
   Geolocation requires a secure context and the users permission, and the
   browser prompt only appears when they click the button. Nothing happens on
@@ -23,7 +25,14 @@ defmodule HoloMap.Control.Geolocate do
 
   use HoloMap.Def
 
-  @keys [track_user_location: "trackUserLocation", show_user_location: "showUserLocation", show_accuracy_circle: "showAccuracyCircle", show_user_heading: "showUserHeading", position_options: "positionOptions", fit_bounds_options: "fitBoundsOptions"]
+  @keys [
+    track_user_location: "trackUserLocation",
+    show_user_location: "showUserLocation",
+    show_accuracy_circle: "showAccuracyCircle",
+    show_user_heading: "showUserHeading",
+    position_options: "positionOptions",
+    fit_bounds_options: "fitBoundsOptions"
+  ]
 
   prop :position, :string,
     default: "top-right",

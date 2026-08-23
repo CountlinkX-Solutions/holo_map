@@ -60,7 +60,8 @@ end
 ```
 
 `HoloMap` cannot ship its npm dependency — Hologram resolves bare import specifiers against the
-*host application's* `assets/package.json`. Three steps, once per application:
+*host application's* `assets/package.json`. Three steps, once per application, and the
+[Installation guide](guides/installation.md) walks through them:
 
 1. `npm install --prefix assets maplibre-gl@^6.5.0`
 2. Serve `maplibre-gl-worker.mjs` and `maplibre-gl-shared.mjs` from `/assets/` — MapLibre's own
@@ -87,18 +88,23 @@ map.setPaintProperty("parcels-fill", "fill-color", "#ef4444")
 ```
 
 Mount, update and unmount all fall out of that, without a framework hook for any of them — and it
-works *with* Hologram's virtual DOM, which already preserves JavaScript-managed children.
+works *with* Hologram's virtual DOM, which already preserves JavaScript-managed children. The
+[Architecture guide](guides/architecture.md) goes into the consequences.
 
 One practical upshot: almost all of `HoloMap` is pure Elixir that builds JSON, so almost all of it
 is unit tested. Only `HoloMap.Runtime` touches JavaScript.
 
-## Documentation
+## Guides
 
-Every module carries a full `@moduledoc` — prop tables, event payloads and the reasoning behind
-the awkward parts. Run `mix docs`, or start from `HoloMap`.
+- [Installation](guides/installation.md) — the three steps `HoloMap` cannot do for you
+- [Getting started](guides/getting-started.md) — from an empty map to data, state and events
+- [Architecture](guides/architecture.md) — how a prop change becomes a MapLibre call, and what it costs
+- [Events](guides/events.md) — handler syntax, targets, and every payload
+- [Imperative API](guides/imperative-api.md) — the escape hatch, and when to reach for it
+- [Limitations](guides/limitations.md) — what does not work, and why
 
-Narrative guides (installation, getting started, architecture, events, imperative API,
-limitations) are not written yet.
+Every module also carries a full `@moduledoc` with prop tables and the reasoning behind the
+awkward parts. Run `mix docs`, or start from `HoloMap`.
 
 ## Demo
 

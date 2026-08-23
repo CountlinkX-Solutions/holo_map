@@ -51,7 +51,7 @@ defmodule HoloMap.MixProject do
       },
       # `.mjs` files live next to their Elixir modules so Hologram's `js_import`
       # can resolve them with a relative path. They must ship with the package.
-      files: ~w(lib mix.exs README.md LICENSE .formatter.exs)
+      files: ~w(lib guides mix.exs README.md CHANGELOG.md LICENSE .formatter.exs)
     ]
   end
 
@@ -59,7 +59,19 @@ defmodule HoloMap.MixProject do
     [
       main: "readme",
       source_ref: "v#{@version}",
-      extras: ["README.md"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "guides/installation.md",
+        "guides/getting-started.md",
+        "guides/architecture.md",
+        "guides/events.md",
+        "guides/imperative-api.md",
+        "guides/limitations.md"
+      ],
+      groups_for_extras: [
+        Guides: ~r"guides/"
+      ],
       groups_for_modules: [
         "Map container": [HoloMap.Map],
         Sources: ~r"HoloMap\.Source",

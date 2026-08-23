@@ -2,7 +2,7 @@ defmodule HoloMap.Event do
   @moduledoc """
   Normalises the event-handler props that components accept.
 
-  MapLibre events reach Elixir through `Hologram.dispatchAction/3`, which needs
+  MapLibre events reach Elixir through JavaScript's `Hologram.dispatchAction()`, which needs
   three things: an action name, a target component id, and a params map. Event
   props therefore accept the same shapes Hologram's own longhand event bindings
   do, so there is one syntax to remember:
