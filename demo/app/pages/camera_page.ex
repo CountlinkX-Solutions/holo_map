@@ -33,6 +33,9 @@ defmodule Demo.CameraPage do
         </button>
       {/for}
       <button $click={:whole_world}>Fit world</button>
+      <button $click={:ease}>Ease north-up</button>
+      <button $click={:jump}>Jump to origin</button>
+      <button $click={:resize}>Resize</button>
       <span>{@last}</span>
     </div>
 
@@ -51,6 +54,21 @@ defmodule Demo.CameraPage do
     )
 
     put_state(component, :last, "flew to #{params.name}")
+  end
+
+  def action(:ease, _params, component) do
+    HoloMap.API.ease_to("camera", bearing: 0, pitch: 0, duration: 900)
+    put_state(component, :last, "eased back to north-up")
+  end
+
+  def action(:jump, _params, component) do
+    HoloMap.API.jump_to("camera", center: {0.0, 0.0}, zoom: 2)
+    put_state(component, :last, "jumped to 0, 0")
+  end
+
+  def action(:resize, _params, component) do
+    HoloMap.API.resize("camera")
+    put_state(component, :last, "asked the map to recompute its size")
   end
 
   def action(:whole_world, _params, component) do

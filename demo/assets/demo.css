@@ -8,11 +8,11 @@ body {
 }
 
 .topbar {
-  display: flex; gap: 1.5rem; align-items: baseline;
+  display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: baseline;
   padding: 0.75rem 1.25rem;
   background: #111827; color: #f9fafb;
 }
-.topbar nav { display: flex; gap: 1rem; }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 0.9rem; }
 .topbar a { color: #93c5fd; text-decoration: none; }
 .topbar a:hover { text-decoration: underline; }
 

@@ -10,8 +10,9 @@ defmodule Demo.HomePage do
     ~HOLO"""
     <h1>HoloMap</h1>
     <p>
-      MapLibre GL JS components for Hologram. Each page below exercises one part of the
-      library against MapLibre's public demo tiles, so nothing here needs an API key.
+      MapLibre GL JS components for Hologram. Every page below exercises one part of the
+      library against data published by MapLibre's own documentation, so nothing here needs
+      an API key.
     </p>
 
     <ul class="index">
@@ -31,6 +32,26 @@ defmodule Demo.HomePage do
       <li>
         <Link to={Demo.ClusteringPage}>Clustering</Link>
         — a clustered source with separate cluster and single-point layers.
+      </li>
+      <li>
+        <Link to={Demo.VectorPage}>Vector tiles</Link>
+        — a vector source with fill and line layers over an inline style, plus a runtime filter.
+      </li>
+      <li>
+        <Link to={Demo.RasterPage}>Raster and image sources</Link>
+        — OpenStreetMap tiles with a radar image pinned on top, stepped frame by frame.
+      </li>
+      <li>
+        <Link to={Demo.HeatmapPage}>Heatmap</Link>
+        — six thousand earthquakes, fading between a heat surface and individual circles.
+      </li>
+      <li>
+        <Link to={Demo.TerrainPage}>Terrain, hillshade and sky</Link>
+        — one elevation source driving 3D terrain, shaded relief and an atmosphere.
+      </li>
+      <li>
+        <Link to={Demo.ExtrusionPage}>3D extrusion</Link>
+        — polygons raised by a data-driven height, built in Elixir.
       </li>
       <li>
         <Link to={Demo.CameraPage}>Camera API</Link>

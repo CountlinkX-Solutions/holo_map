@@ -27,6 +27,11 @@ defmodule Demo.MainLayout do
             <Link to={Demo.GeoJSONPage}>GeoJSON</Link>
             <Link to={Demo.MarkersPage}>Markers</Link>
             <Link to={Demo.ClusteringPage}>Clustering</Link>
+            <Link to={Demo.VectorPage}>Vector</Link>
+            <Link to={Demo.RasterPage}>Raster</Link>
+            <Link to={Demo.HeatmapPage}>Heatmap</Link>
+            <Link to={Demo.TerrainPage}>Terrain</Link>
+            <Link to={Demo.ExtrusionPage}>Extrusion</Link>
             <Link to={Demo.CameraPage}>Camera</Link>
           </nav>
         </header>

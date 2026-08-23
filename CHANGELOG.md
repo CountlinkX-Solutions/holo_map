@@ -25,8 +25,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - MapLibre events surfaced as Hologram actions, with payloads documented per
   component and in the Events guide.
 - `window.HoloMap.map/1`, so MapLibre plugins can reach the raw instance.
-- A Phoenix + Hologram demo application exercising every component, and a
-  Playwright suite driving a real MapLibre instance.
+- A Phoenix + Hologram demo application exercising every component across
+  eleven pages, and three Playwright suites driving a real MapLibre instance —
+  component behaviour, full source/layer coverage, and navigation.
 
 ### Notes on the design
 
@@ -45,6 +46,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Definitions are matched to their map by `data-hm-map`, and disposal is decided
   by the container's id rather than `isConnected`, because Hologram morphs the
   old page's DOM into the new one on navigation rather than replacing it.
+
+### Fixed before release
+
+- `HoloMap.Sky` cleared itself with `setSky(null)`, which MapLibre validates and
+  rejects with "sky: object expected, null found". The sky was cleared anyway,
+  but a console error was logged every time the component was removed.
+- The documented shape of layer event payloads was wrong. Hologram converts
+  JavaScript object keys to atoms **recursively**, so a feature's properties
+  arrive as `%{parcel_id: id}`, not `%{"parcel_id" => id}`. Matching with string
+  keys silently fails rather than raising, which is why it survived until every
+  component was exercised in a browser.
 
 ### Requirements
 

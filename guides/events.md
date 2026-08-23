@@ -89,10 +89,31 @@ Each feature carries `id`, `source`, `source_layer`, `properties` and
 and tile which cannot cross into Elixir, so only the actionable parts are
 carried over.
 
+> #### Every key is an atom, all the way down {: .info}
+>
+> Hologram converts JavaScript object keys to atoms when an action's params
+> cross the boundary, and it does so **recursively**. A feature therefore
+> arrives like this:
+>
+> ```elixir
+> %{
+>   id: 0,
+>   source: "cities",
+>   source_layer: nil,
+>   properties: %{name: "Santo Domingo", population: 2_908_000},
+>   geometry: %{type: "Point", coordinates: [-69.93, 18.48]}
+> }
+> ```
+>
+> Your own GeoJSON property names are part of that: a property written as
+> `"parcel_id"` in the data is matched as `%{parcel_id: id}`. Matching with
+> string keys silently fails — the clause simply does not match, and a `case`
+> with a catch-all falls through without an error.
+
 ```elixir
 def action(:parcel_clicked, params, component) do
   case params.features do
-    [%{"properties" => %{"parcel_id" => id}} | _rest] -> put_state(component, :selected, id)
+    [%{properties: %{parcel_id: id}} | _rest] -> put_state(component, :selected, id)
     [] -> put_state(component, :selected, nil)
   end
 end
@@ -138,7 +159,7 @@ unique:
 ```elixir
 def action(:parcel_hover, params, component) do
   case params.features do
-    [%{"id" => id} | _rest] ->
+    [%{id: id} | _rest] ->
       clear_hover(component)
       HoloMap.API.set_feature_state("explorer", %{source: "parcels", id: id}, %{hover: true})
       put_state(component, :hovered, id)

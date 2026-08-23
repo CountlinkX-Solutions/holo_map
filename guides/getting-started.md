@@ -153,14 +153,16 @@ Add an event prop; write an ordinary action:
 ```elixir
 def action(:parcel_clicked, params, component) do
   case params.features do
-    [%{"properties" => %{"parcel_id" => id}} | _rest] -> put_state(component, :selected, id)
+    [%{properties: %{parcel_id: id}} | _rest] -> put_state(component, :selected, id)
     [] -> component
   end
 end
 ```
 
 `params.features` holds the features under the pointer, each with `id`,
-`source`, `source_layer`, `properties` and `geometry`. The full payload
+`source`, `source_layer`, `properties` and `geometry`. Every key arrives as an
+**atom**, nested ones included — so a GeoJSON property named `parcel_id` is
+matched as `%{parcel_id: id}`, not `%{"parcel_id" => id}`. The full payload
 reference is in [Events](events.html).
 
 ## Showing a popup

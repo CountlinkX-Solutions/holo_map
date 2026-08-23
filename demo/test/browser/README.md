@@ -30,6 +30,19 @@ $ npm test
 
 ## What each covers
 
+`coverage.mjs` — every source and layer type, against data published by
+MapLibre's own documentation: a vector source with fill and line layers, a
+raster source over OpenStreetMap tiles, an image source stepping through radar
+frames, a heatmap over six thousand earthquakes, a raster-DEM source driving
+terrain and hillshade, a sky, fill-extrusion, and each of the eleven
+`HoloMap.API` functions.
+
+This file exists because a unit test asserts that `min_zoom` becomes
+`"minzoom"` — the key *this library chose*. Nothing there proves MapLibre
+*accepts* that key. Only a browser does, and every component here is checked
+against the live map rather than against the DOM: `map.getSource/1`,
+`map.getLayer/1`, `map.getPaintProperty/2`, `map.getTerrain/0`, `map.getSky/0`.
+
 `components.mjs` — one map booting with a non-zero canvas and its controls; a
 GeoJSON source and its layers reaching MapLibre; a paint change arriving as
 `setPaintProperty` without rebuilding the canvas; a filter change arriving as

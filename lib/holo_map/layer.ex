@@ -51,7 +51,7 @@ defmodule HoloMap.Layer do
 
       def action(:parcel_clicked, params, component) do
         case params.features do
-          [%{properties: %{"parcel_id" => id}} | _rest] -> put_state(component, :selected, id)
+          [%{properties: %{parcel_id: id}} | _rest] -> put_state(component, :selected, id)
           [] -> component
         end
       end

@@ -22,7 +22,8 @@ defmodule Demo.GeoJSONPage do
       cities: feature_collection(@cities),
       region: "all",
       colour: "#2563eb",
-      selected: nil
+      selected: nil,
+      hovered: nil
     )
   end
 
@@ -63,7 +64,7 @@ defmodule Demo.GeoJSONPage do
           circle_color: @colour,
           circle_opacity: 0.75,
           circle_stroke_color: "#ffffff",
-          circle_stroke_width: 1.5,
+          circle_stroke_width: ["case", ["boolean", ["feature-state", "hover"], false], 4, 1.5],
           circle_radius: [
             "interpolate",
             ["linear"],
@@ -75,7 +76,8 @@ defmodule Demo.GeoJSONPage do
           ]
         }}
         on_click={:city_clicked}
-        on_mouse_enter={:city_hovered}
+        on_mouse_move={:city_hovered}
+        on_mouse_leave={:city_unhovered}
       />
 
       <HoloMap.Layer.Symbol
@@ -115,12 +117,35 @@ defmodule Demo.GeoJSONPage do
 
   def action(:city_clicked, params, component) do
     case params.features do
-      [feature | _rest] -> put_state(component, :selected, feature["properties"]["name"])
+      [%{properties: %{name: name}} | _rest] -> put_state(component, :selected, name)
       [] -> component
     end
   end
 
-  def action(:city_hovered, _params, component), do: component
+  # Feature state is the mechanism behind hover styling, and it belongs to a
+  # feature rather than to a component — so it has no declarative equivalent.
+  def action(:city_hovered, params, component) do
+    case params.features do
+      [%{id: id} | _rest] when not is_nil(id) ->
+        clear_hover(component.state.hovered)
+        HoloMap.API.set_feature_state("cities", %{source: "cities", id: id}, %{hover: true})
+        put_state(component, :hovered, id)
+
+      _other ->
+        component
+    end
+  end
+
+  def action(:city_unhovered, _params, component) do
+    clear_hover(component.state.hovered)
+    put_state(component, :hovered, nil)
+  end
+
+  defp clear_hover(nil), do: :ok
+
+  defp clear_hover(id) do
+    HoloMap.API.remove_feature_state("cities", %{source: "cities", id: id}, "hover")
+  end
 
   defp feature_collection(cities) do
     %{
