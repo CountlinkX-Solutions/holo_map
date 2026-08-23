@@ -35,7 +35,8 @@ MapLibre's own documentation: a vector source with fill and line layers, a
 raster source over OpenStreetMap tiles, an image source stepping through radar
 frames, a heatmap over six thousand earthquakes, a raster-DEM source driving
 terrain and hillshade, a sky, fill-extrusion over both a basemap's own source
-and application-owned GeoJSON, two maps on one page, every control including
+and application-owned GeoJSON, two maps on one page, an image registered with `HoloMap.Image` and resolved by
+a symbol layer's `icon_image`, every control including
 MapLibre 6's globe and terrain buttons, and each of the eleven `HoloMap.API`
 functions.
 

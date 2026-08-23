@@ -135,7 +135,6 @@ the browser and is subject to it.
 
 ## Not implemented yet
 
-- Declarative `addImage` / sprite management for symbol layers
 - Nested `HoloMap.Popup` inside a `HoloMap.Marker` slot; use the marker's
   `popup_html` prop
 - Server-side rendering of a static map image

@@ -14,6 +14,9 @@ defmodule HoloMap.Layer.Fill do
 
   `fill_sort_key`, `visibility`.
 
+  `fill_pattern` names an image the same way `icon_image` does: it must come
+  from the style's sprite or from a `HoloMap.Image`.
+
   Property names may be written as atoms in Elixir style (`:fill_color`) or as
   MapLibre specification names (`"fill-color"`); both reach MapLibre as the
   latter. The full reference lives in the

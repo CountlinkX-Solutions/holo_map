@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.Heatmap`, `.Hillshade`, `.FillExtrusion`, plus a generic `HoloMap.Layer`
   for a type decided at runtime.
 - Overlays: `HoloMap.Marker` and `HoloMap.Popup`, both accepting slot content.
+- `HoloMap.Image`, which registers an image so a symbol layer's `icon_image` —
+  or a fill or line layer's pattern — can name it. Without it, only icons the
+  style's own sprite carries are reachable, and naming anything else fails
+  silently: MapLibre emits `styleimagemissing` and draws nothing.
 - Controls: `HoloMap.Control.Navigation`, `.Scale`, `.Geolocate`, `.Fullscreen`,
   `.Attribution`, plus `.Globe` and `.Terrain`, both new in MapLibre GL JS 6.
 - 3D: `HoloMap.Terrain` and `HoloMap.Sky`.

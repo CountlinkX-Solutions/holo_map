@@ -165,6 +165,39 @@ record("heatmap: heatmap_weight expression arrived intact", Array.isArray(r.weig
 record("heatmap: HoloMap.Control.Geolocate attached",
   (await page.locator(".maplibregl-ctrl-geolocate").count()) > 0);
 
+// --- registered images, and the symbol layer that names one -----------------
+await page.goto(BASE + "/markers", { waitUntil: "domcontentloaded" });
+await page.waitForFunction(() => window.HoloMap && window.HoloMap.map("symbols"), null, { timeout: 30000 });
+await page.waitForTimeout(6000);
+
+r = await inspect("symbols", (map) => ({
+  sprite: map.getStyle().sprite ?? null,
+  images: map.listImages(),
+  hasOurs: map.hasImage("place-pin"),
+  layer: map.getLayer("places-icons")?.type ?? null,
+  rendered: map.queryRenderedFeatures({ layers: ["places-icons"] }).length,
+  iconSize: map.getLayoutProperty("places-icons", "icon-size"),
+  canvasFillsContainer: (() => {
+    const c = document.getElementById("hm--symbols");
+    return c.querySelector("canvas.maplibregl-canvas").clientWidth === c.clientWidth;
+  })(),
+}));
+// The premise of the whole component: this style carries no sprite, so an icon
+// name is resolvable only because HoloMap.Image registered one.
+record("image: the style ships no sprite of its own", r.sprite === null, String(r.sprite));
+record("image: HoloMap.Image registered the icon", r.hasOurs && r.images.includes("place-pin"),
+  JSON.stringify(r.images));
+record("image: the symbol layer resolved icon_image and drew", r.layer === "symbol" && r.rendered > 3,
+  `${r.rendered} icons`);
+record("image: icon_size arrived dasherized", r.iconSize === 0.5, String(r.iconSize));
+record("image: the canvas fills its container", r.canvasFillsContainer);
+
+await page.locator("#hm--symbols").scrollIntoViewIfNeeded();
+await page.getByRole("button", { name: "Large icons" }).click();
+await page.waitForTimeout(1200);
+record("image: resizing the icons reached the live layer",
+  (await inspect("symbols", (map) => map.getLayoutProperty("places-icons", "icon-size"))) === 0.9);
+
 // --- raster-dem source, terrain, hillshade, sky ------------------------------
 await open("/terrain", "relief");
 await page.waitForFunction(() => window.HoloMap.map("user-relief"), null, { timeout: 30000 });

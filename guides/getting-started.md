@@ -165,6 +165,25 @@ end
 matched as `%{parcel_id: id}`, not `%{"parcel_id" => id}`. The full payload
 reference is in [Events](events.html).
 
+## Icons
+
+`icon_image` on a symbol layer names an image; it does not fetch one. If the
+name is not in the style's own sprite — and plenty of styles ship none — nothing
+draws, and nothing reports why. Register your own with `HoloMap.Image`:
+
+```elixir
+<HoloMap.Image id="pin" url="/icons/pin.png" />
+
+<HoloMap.Layer.Symbol
+  id="stops"
+  source="stops"
+  layout={%{icon_image: "pin", icon_size: 0.5, icon_allow_overlap: true}}
+/>
+```
+
+Order does not matter: the layer starts drawing once the image arrives. The same
+applies to `fill_pattern` and `line_pattern`.
+
 ## Showing a popup
 
 A popup in the template is open; closing it means not rendering it:

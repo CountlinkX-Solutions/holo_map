@@ -16,7 +16,8 @@ defmodule HoloMap.Marker do
   cheap to reason about, and expensive at scale — a few dozen is comfortable, a
   few thousand is not. Past that, put the points in a
   `HoloMap.Source.GeoJSON` and draw them with `HoloMap.Layer.Circle` or
-  `HoloMap.Layer.Symbol`, which render on the GPU.
+  `HoloMap.Layer.Symbol`, which render on the GPU. `HoloMap.Image` is what lets
+  that symbol layer use an icon of your own.
 
   ## Props
 
