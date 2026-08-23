@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-08-23
 
 ### Added
 
@@ -51,7 +51,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by the container's id rather than `isConnected`, because Hologram morphs the
   old page's DOM into the new one on navigation rather than replacing it.
 
-### Fixed before release
+### Behaviour worth knowing
 
 - A popup MapLibre closed on its own (the close button, a click on the map, a
   camera move) left the reconciler believing it was still open. Clicking the
@@ -73,3 +73,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Elixir 1.19+, OTP 28.1+, Hologram 0.11+
 - MapLibre GL JS 6.x, installed and served by the host application
+
+[0.1.0]: https://github.com/CountlinkX-Solutions/holo_map/releases/tag/v0.1.0
