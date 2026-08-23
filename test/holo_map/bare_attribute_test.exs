@@ -7,7 +7,8 @@ defmodule HoloMap.BareAttributeTest do
   # component nor the prop. Every boolean prop is coerced instead.
 
   test "a bare boolean attribute on a source means true" do
-    html = render_def(HoloMap.Source.GeoJSON, id: "s", data: "/s.json", cluster: "", generate_id: "")
+    html =
+      render_def(HoloMap.Source.GeoJSON, id: "s", data: "/s.json", cluster: "", generate_id: "")
 
     spec = spec_for(html, "s")
 

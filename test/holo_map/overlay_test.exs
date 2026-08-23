@@ -55,7 +55,10 @@ defmodule HoloMap.OverlayTest do
     end
 
     test "omits the popup key entirely when no html is given" do
-      refute Map.has_key?(spec_for(render_def(HoloMap.Marker, id: "m", lng_lat: {0, 0}), "m"), "popup")
+      refute Map.has_key?(
+               spec_for(render_def(HoloMap.Marker, id: "m", lng_lat: {0, 0}), "m"),
+               "popup"
+             )
     end
 
     test "renders a content holder for slot markup" do

@@ -24,8 +24,6 @@ defmodule HoloMap.Control.Fullscreen do
     default: "top-right",
     values: ["top-left", "top-right", "bottom-left", "bottom-right"]
 
-
-
   @impl Hologram.Component
   def template do
     ~HOLO"""

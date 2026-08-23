@@ -118,7 +118,7 @@ defmodule HoloMap.SourceTest do
           red_factor: 256.0,
           green_factor: 1.0,
           blue_factor: 0.00390625,
-          base_shift: 32768.0
+          base_shift: 32_768.0
         )
 
       spec = spec_for(html, "dem")
@@ -163,7 +163,8 @@ defmodule HoloMap.SourceTest do
           {HoloMap.Source.Vector, [id: "s", url: "/s.json"]},
           {HoloMap.Source.Raster, [id: "s", url: "/s.json"]},
           {HoloMap.Source.RasterDEM, [id: "s", url: "/s.json"]},
-          {HoloMap.Source.Image, [id: "s", url: "/s.png", coordinates: [{0, 0}, {1, 0}, {1, 1}, {0, 1}]]}
+          {HoloMap.Source.Image,
+           [id: "s", url: "/s.png", coordinates: [{0, 0}, {1, 0}, {1, 1}, {0, 1}]]}
         ] do
       assert_raise ArgumentError, ~r/outside a <HoloMap.Map>/, fn -> render(module, props) end
     end

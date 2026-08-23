@@ -1,6 +1,8 @@
 defmodule HoloMap.LayerTest do
   use HoloMap.RenderCase, async: true
 
+  alias HoloMap.Layer
+
   doctest HoloMap.Layer.Base
 
   describe "specification" do
@@ -92,7 +94,12 @@ defmodule HoloMap.LayerTest do
 
     test "merges with an existing layout map" do
       html =
-        render_def(HoloMap.Layer.Line, id: "l", source: "s", layout: %{line_cap: "round"}, visible: true)
+        render_def(HoloMap.Layer.Line,
+          id: "l",
+          source: "s",
+          layout: %{line_cap: "round"},
+          visible: true
+        )
 
       assert spec_for(html, "l")["layout"] == %{"line-cap" => "round", "visibility" => "visible"}
     end
@@ -134,7 +141,7 @@ defmodule HoloMap.LayerTest do
       # a `values:` constraint, because Hologram only checks such constraints
       # while rendering. Here there is nothing to check: a `type` attribute is
       # not a declared prop, so it is filtered out and the layer stays a fill.
-      refute Enum.any?(HoloMap.Layer.Fill.__props__(), fn {name, _, _} -> name == :type end)
+      refute Enum.any?(Layer.Fill.__props__(), fn {name, _, _} -> name == :type end)
 
       html = render_def(HoloMap.Layer.Fill, id: "l", source: "s", type: "line")
       assert spec_for(html, "l")["type"] == "fill"
