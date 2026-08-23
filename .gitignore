@@ -1,0 +1,27 @@
+# Mix build artefacts.
+_build/
+cover/
+deps/
+doc/
+.fetch
+*.ez
+*.beam
+erl_crash.dump
+holo_map-*.tar
+
+# Language server scratch.
+.elixir_ls/
+.elixir-tools/
+.lexical/
+
+# npm.
+node_modules/
+
+# Hologram generated JavaScript bundles.
+**/priv/static/hologram/
+
+# Assets the demo copies out of node_modules at build time.
+**/priv/static/assets/
+
+# Screenshots the browser tests write.
+**/test/browser/*.png

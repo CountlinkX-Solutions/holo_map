@@ -1,0 +1,79 @@
+defmodule HoloMap.MixProject do
+  use Mix.Project
+
+  @version "0.1.0"
+  @source_url "https://github.com/roger120981/holo_map"
+  @maplibre_version "6.5.0"
+
+  def project do
+    [
+      app: :holo_map,
+      version: @version,
+      elixir: "~> 1.19",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      start_permanent: Mix.env() == :prod,
+      deps: deps(),
+      description: description(),
+      package: package(),
+      docs: docs(),
+      name: "HoloMap",
+      source_url: @source_url,
+      test_coverage: [summary: [threshold: 0]]
+    ]
+  end
+
+  def application do
+    [extra_applications: [:logger]]
+  end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_env), do: ["lib"]
+
+  defp deps do
+    [
+      {:hologram, "~> 0.11"},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp description do
+    "Declarative MapLibre GL JS map components for the Hologram Elixir framework."
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "MapLibre GL JS" => "https://maplibre.org/maplibre-gl-js/docs/"
+      },
+      # `.mjs` files live next to their Elixir modules so Hologram's `js_import`
+      # can resolve them with a relative path. They must ship with the package.
+      files: ~w(lib mix.exs README.md LICENSE .formatter.exs)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      source_ref: "v#{@version}",
+      extras: ["README.md"],
+      groups_for_modules: [
+        "Map container": [HoloMap.Map],
+        Sources: ~r"HoloMap\.Source",
+        Layers: ~r"HoloMap\.Layer",
+        Overlays: [HoloMap.Marker, HoloMap.Popup],
+        Controls: ~r"HoloMap\.Control",
+        "3D & terrain": [HoloMap.Terrain, HoloMap.Sky],
+        "Imperative API": [HoloMap.API],
+        Internals: [HoloMap.JSON, HoloMap.Spec, HoloMap.Event, HoloMap.Runtime]
+      ],
+      before_closing_body_tag: fn
+        :html -> ~s(<!-- MapLibre GL JS #{@maplibre_version} -->)
+        _ -> ""
+      end
+    ]
+  end
+end
