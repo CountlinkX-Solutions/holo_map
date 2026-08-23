@@ -113,10 +113,12 @@ awkward parts. Run `mix docs`, or start from `HoloMap`.
 demo tiles — no API key needed.
 
 ```console
-$ cd demo
-$ mix setup
+$ mix demo.setup
 $ mix server        # http://localhost:4000
 ```
+
+Those run from the repository root. The demo is its own Mix project in `demo/`, so
+`cd demo && mix setup && mix server` works too — the root aliases just save the `cd`.
 
 Its browser test suite lives in `demo/test/browser/` and drives a real MapLibre instance through
 Playwright — see the README there for what it covers and why.

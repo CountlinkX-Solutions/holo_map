@@ -18,6 +18,7 @@ defmodule HoloMap.MixProject do
       docs: docs(),
       name: "HoloMap",
       source_url: @source_url,
+      aliases: aliases(),
       test_coverage: [summary: [threshold: 0]]
     ]
   end
@@ -36,6 +37,39 @@ defmodule HoloMap.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
+  end
+
+  # The demo is a separate Mix project in demo/. These forward to it, so
+  # `mix server` works from the repository root — which is where you are when
+  # you have just been editing the library.
+  defp aliases do
+    [
+      server: &demo("server", &1),
+      "demo.setup": &demo("setup", &1),
+      "demo.test": &demo_browser_test/1
+    ]
+  end
+
+  defp demo(task, _args) do
+    unless File.dir?("demo") do
+      Mix.raise(
+        "no demo/ directory here — these aliases only work in a checkout of the repository"
+      )
+    end
+
+    {_output, status} = System.cmd("mix", [task], cd: "demo", into: IO.stream())
+
+    if status != 0 do
+      Mix.raise("mix #{task} failed in demo/ with exit status #{status}")
+    end
+  end
+
+  defp demo_browser_test(_args) do
+    {_output, status} = System.cmd("npm", ["test"], cd: "demo/test/browser", into: IO.stream())
+
+    if status != 0 do
+      Mix.raise("the browser suite failed — is `mix server` running in demo/?")
+    end
   end
 
   defp description do
