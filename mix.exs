@@ -19,7 +19,10 @@ defmodule HoloMap.MixProject do
       name: "HoloMap",
       source_url: @source_url,
       aliases: aliases(),
-      test_coverage: [summary: [threshold: 0]]
+      test_coverage: [summary: [threshold: 0]],
+      # Outside _build so CI can cache it across runs; building the PLT from
+      # scratch costs more than every other check combined.
+      dialyzer: [plt_local_path: "priv/plts", plt_core_path: "priv/plts"]
     ]
   end
 

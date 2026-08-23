@@ -1,0 +1,87 @@
+name: Browser suites
+
+# Not on every push, deliberately.
+#
+# These suites drive a real MapLibre instance against real tile servers:
+# demotiles.maplibre.org, tiles.openfreemap.org, tiles.mapterhorn.com,
+# maplibre.org's documentation assets, and tile.openstreetmap.org, whose usage
+# policy asks that automated traffic stay modest. Running them on every commit
+# would put someone else's infrastructure in this project's critical path and
+# make the build fail for reasons that have nothing to do with the change.
+#
+# Weekly is enough to catch a MapLibre release or a moved asset, and the manual
+# trigger is there for when a change actually touches the runtime.
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: browser
+  cancel-in-progress: true
+
+env:
+  ELIXIR_VERSION: "1.19.5"
+  OTP_VERSION: "28.5"
+
+jobs:
+  browser:
+    name: Components, coverage, layers, navigation, accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # mix holo watches the filesystem for live reload and refuses to start
+      # without a watcher backend.
+      - name: Install the filesystem watcher mix holo needs
+        run: sudo apt-get update && sudo apt-get install -y inotify-tools
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            demo/deps
+            demo/_build
+          key: demo-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('demo/mix.lock') }}
+          restore-keys: demo-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Build the demo
+        run: mix setup
+        working-directory: demo
+
+      - name: Start it
+        run: |
+          mix server > "$RUNNER_TEMP/demo.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:4000/; then
+              echo "demo answering after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "demo never came up"
+          cat "$RUNNER_TEMP/demo.log"
+          exit 1
+        working-directory: demo
+
+      - run: npm ci
+        working-directory: demo/test/browser
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: demo/test/browser
+
+      - run: npm test
+        working-directory: demo/test/browser
+
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/demo.log"

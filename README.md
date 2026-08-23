@@ -1,5 +1,9 @@
 # HoloMap
 
+[![Hex.pm](https://img.shields.io/hexpm/v/holo_map.svg)](https://hex.pm/packages/holo_map)
+[![Documentation](https://img.shields.io/badge/hexdocs-holo__map-8e7cc3)](https://hexdocs.pm/holo_map)
+[![CI](https://github.com/CountlinkX-Solutions/holo_map/actions/workflows/ci.yml/badge.svg)](https://github.com/CountlinkX-Solutions/holo_map/actions/workflows/ci.yml)
+
 Declarative [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) map components for the
 [Hologram](https://hologram.page) Elixir framework.
 
@@ -122,6 +126,23 @@ Those run from the repository root. The demo is its own Mix project in `demo/`, 
 
 Its browser test suite lives in `demo/test/browser/` and drives a real MapLibre instance through
 Playwright. See the README there for what it covers and why.
+
+## Continuous integration
+
+Two workflows, split by what they depend on.
+
+`ci.yml` runs on every push and pull request: compile with warnings as errors,
+formatter, Credo strict, tests, docs, Dialyzer, and a build of the demo, which
+depends on the library by path and so catches a change that breaks a component's
+template or props. It touches nothing outside Hex.
+
+`browser.yml` runs the five Playwright suites weekly, and on demand. It is
+deliberately not on every push: those suites drive a real MapLibre instance
+against real tile servers, including OpenStreetMap's, whose usage policy asks
+that automated traffic stay modest. Putting someone else's infrastructure in
+this project's critical path would make the build fail for reasons unrelated to
+the change. Weekly catches a MapLibre release or a moved asset; the manual
+trigger covers a change that actually touches the runtime.
 
 ## Licence
 

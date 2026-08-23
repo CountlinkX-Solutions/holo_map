@@ -73,10 +73,16 @@ defmodule Demo.MixProject do
   end
 
   defp install_npm_deps(_args) do
-    {_output, status} = System.cmd("npm", ["install", "--prefix", "assets"], into: IO.stream())
+    # `npm ci` installs exactly what the lockfile says and fails if the two have
+    # drifted, which is what a build should do. It needs the lockfile to exist,
+    # so a first run without one falls back to `install`.
+    command = if File.exists?("assets/package-lock.json"), do: "ci", else: "install"
+
+    {_output, status} =
+      System.cmd("npm", [command, "--prefix", "assets"], into: IO.stream())
 
     if status != 0 do
-      Mix.raise("npm install failed in assets/")
+      Mix.raise("npm #{command} failed in assets/")
     end
   end
 
