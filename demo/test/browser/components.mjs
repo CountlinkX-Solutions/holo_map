@@ -1,0 +1,177 @@
+import { chromium } from "playwright";
+
+const BASE = process.env.HOLO_MAP_DEMO_URL || "http://localhost:4000";
+const results = [];
+let failures = 0;
+
+function record(name, ok, detail = "") {
+  results.push(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? " — " + detail : ""}`);
+  if (!ok) failures++;
+}
+
+async function step(name, fn) {
+  try {
+    await fn();
+  } catch (error) {
+    record(name, false, String(error.message).split(String.fromCharCode(10))[0]);
+  }
+}
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+
+const consoleErrors = [];
+page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
+page.on("pageerror", (e) => consoleErrors.push("pageerror: " + e.message));
+
+// Report what MapLibre actually built, read from the live map instance.
+async function mapReport(cid) {
+  return page.evaluate(async (cid) => {
+    const el = document.getElementById(`hm--${cid}`);
+    if (!el) return { error: "no container" };
+    // The canvas MapLibre injects is the proof the instance exists and rendered.
+    const canvas = el.querySelector("canvas.maplibregl-canvas");
+    return {
+      hasCanvas: Boolean(canvas),
+      canvasSize: canvas ? [canvas.clientWidth, canvas.clientHeight] : null,
+      controls: el.querySelectorAll(".maplibregl-ctrl").length,
+      markers: document.querySelectorAll(".maplibregl-marker").length,
+      popups: document.querySelectorAll(".maplibregl-popup").length,
+    };
+  }, cid);
+}
+
+async function waitForMap(cid, ms = 20000) {
+  await page.waitForFunction(
+    (cid) => {
+      const el = document.getElementById(`hm--${cid}`);
+      return el && el.querySelector("canvas.maplibregl-canvas");
+    },
+    cid,
+    { timeout: ms },
+  );
+}
+
+// --- basic page: map boots, controls attach, state drives the camera --------
+await page.goto(`${BASE}/basic`, { waitUntil: "domcontentloaded" });
+await waitForMap("basic");
+let r = await mapReport("basic");
+record("basic: MapLibre canvas exists", r.hasCanvas);
+record("basic: canvas has non-zero size", r.canvasSize && r.canvasSize[0] > 100 && r.canvasSize[1] > 100,
+  JSON.stringify(r.canvasSize));
+record("basic: three controls attached", r.controls >= 3, `found ${r.controls}`);
+record("basic: the map is reachable from plain JavaScript",
+  await page.evaluate(() => Boolean(window.HoloMap && window.HoloMap.map("basic"))));
+
+// --- geojson page: source + layers reach MapLibre ----------------------------
+await page.goto(`${BASE}/geojson`, { waitUntil: "domcontentloaded" });
+await waitForMap("cities");
+await page.waitForTimeout(2500);
+
+// Assert on what MapLibre actually built, not on what the DOM looks like.
+const layerState = await page.evaluate(() => {
+  const map = window.HoloMap.map("cities");
+  const style = map.getStyle();
+  return {
+    hasSource: Boolean(map.getSource("cities")),
+    layers: ["cities-circles", "cities-labels"].filter((id) => Boolean(map.getLayer(id))),
+    circleColour: map.getPaintProperty("cities-circles", "circle-color"),
+    filter: map.getFilter("cities-circles") || null,
+    styleLayerCount: style.layers.length,
+  };
+});
+record("geojson: the source reached MapLibre", layerState.hasSource);
+record("geojson: both layers reached MapLibre", layerState.layers.length === 2,
+  layerState.layers.join(", "));
+record("geojson: paint arrived dasherized", layerState.circleColour === "#2563eb",
+  String(layerState.circleColour));
+record("geojson: no filter while the region is \"all\"", layerState.filter === null,
+  JSON.stringify(layerState.filter));
+
+// Changing paint state must not rebuild anything — the canvas node stays put.
+const canvasBefore = await page.evaluate(() =>
+  document.querySelector("#hm--cities canvas.maplibregl-canvas").getAttribute("width"));
+await page.getByRole("button", { name: "Red" }).click();
+await page.waitForTimeout(800);
+const canvasAfter = await page.evaluate(() =>
+  document.querySelector("#hm--cities canvas.maplibregl-canvas").getAttribute("width"));
+record("geojson: paint change kept the same canvas", canvasBefore === canvasAfter);
+record("geojson: paint change reached the live layer",
+  (await page.evaluate(() => window.HoloMap.map("cities").getPaintProperty("cities-circles", "circle-color"))) === "#dc2626");
+
+await page.getByRole("button", { name: "Andes" }).click();
+await page.waitForTimeout(800);
+record("geojson: filter change reached the live layer",
+  JSON.stringify(await page.evaluate(() => window.HoloMap.map("cities").getFilter("cities-circles")))
+    === JSON.stringify(["==", ["get", "region"], "andes"]));
+record("geojson: nothing errored", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
+
+// --- markers page: markers, custom slot content, popup from state -----------
+await page.goto(`${BASE}/markers`, { waitUntil: "domcontentloaded" });
+await waitForMap("markers");
+await page.waitForTimeout(1500);
+r = await mapReport("markers");
+record("markers: three markers on the map", r.markers === 3, `found ${r.markers}`);
+record("markers: custom slot markup was cloned into a marker",
+  await page.locator(".maplibregl-marker .chip").count() === 1);
+
+await step("markers: clicking a marker opened a state-driven popup", async () => {
+  await page.locator(".maplibregl-marker .chip").click({ timeout: 5000 });
+  await page.waitForTimeout(900);
+  const rr = await mapReport("markers");
+  record("markers: clicking a marker opened a state-driven popup", rr.popups === 1, `found ${rr.popups}`);
+});
+
+
+// --- clustering: a structural source change survives ------------------------
+await page.goto(`${BASE}/clustering`, { waitUntil: "domcontentloaded" });
+await waitForMap("clusters");
+await page.waitForTimeout(2500);
+const before = consoleErrors.length;
+await page.getByRole("button", { name: "Radius 90" }).click();
+await page.waitForTimeout(1500);
+record("clustering: cluster radius change rebuilt the source cleanly",
+  consoleErrors.length === before, consoleErrors.slice(before, before + 2).join(" | "));
+record("clustering: map still rendering after the rebuild", (await mapReport("clusters")).hasCanvas);
+const clusterState = await page.evaluate(() => {
+  const map = window.HoloMap.map("clusters");
+  return {
+    layers: ["cluster-circles", "cluster-counts", "single-points"].filter((id) => Boolean(map.getLayer(id))),
+    radius: map.getStyle().sources.points.clusterRadius,
+  };
+});
+record("clustering: all three layers were re-added after the source rebuild",
+  clusterState.layers.length === 3, clusterState.layers.join(", "));
+record("clustering: the new cluster radius reached the source", clusterState.radius === 90,
+  String(clusterState.radius));
+
+// --- camera: the imperative API reaches MapLibre ----------------------------
+await page.goto(`${BASE}/camera`, { waitUntil: "domcontentloaded" });
+await waitForMap("camera");
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Kyoto" }).click();
+await page.waitForTimeout(3000);
+const flew = await page.locator(".controls span").innerText();
+record("camera: fly_to ran and the action updated state", flew.includes("Kyoto"), flew);
+
+// --- teardown: navigating away must dispose the WebGL context ---------------
+await page.goto(`${BASE}/basic`, { waitUntil: "domcontentloaded" });
+await waitForMap("basic");
+await page.waitForTimeout(1000);
+await page.getByRole("link", { name: "Index" }).click();
+await page.waitForTimeout(1500);
+const leaked = await page.evaluate(() => document.querySelectorAll("canvas.maplibregl-canvas").length);
+record("teardown: leaving the page removed the map canvas", leaked === 0, `${leaked} left`);
+record("teardown: the map was unregistered, not just hidden",
+  (await page.evaluate(() => window.HoloMap.cids().length)) === 0);
+
+await page.screenshot({ path: process.env.SHOT || "shot.png", fullPage: false });
+
+await browser.close();
+
+console.log(results.join("\n"));
+console.log(`\n${results.length - failures}/${results.length} checks passed`);
+if (consoleErrors.length) {
+  console.log("\nconsole errors:\n" + consoleErrors.slice(0, 8).join("\n"));
+}
+process.exit(failures ? 1 : 0);

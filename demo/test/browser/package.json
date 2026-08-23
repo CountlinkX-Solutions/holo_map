@@ -1,0 +1,11 @@
+{
+  "name": "holo-map-browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node components.mjs && node navigation.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
+  }
+}
