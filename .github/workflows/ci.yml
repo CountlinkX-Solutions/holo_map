@@ -1,11 +1,9 @@
 name: CI
 
-# Only when a change lands on `main`, plus a manual trigger for checking a
-# branch before it is merged. Pull requests do not start a run.
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  pull_request:
 
 # A newer push supersedes whatever is still running for the same ref.
 concurrency:
