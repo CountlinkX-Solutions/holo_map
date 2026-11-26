@@ -157,6 +157,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   them how long an imperative change lasts, when a popup's `on_open` and
   `on_close` fire, and the MapLibre GL JS release that introduced the globe
   control (5.0.0, not 6).
+- `HoloMap.Map`'s `on_click` was dispatched before the `on_close` of a
+  `close_on_click` popup that the same click closed, because the map's listener
+  is added when the map boots, before any popup. A popup whose `on_close`
+  clears state could therefore undo what the map's `on_click` had just set. It
+  is now dispatched once the click has finished, as a layer's and a marker's
+  are.
 
 ### Security
 

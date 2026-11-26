@@ -1883,6 +1883,34 @@ describe("events", () => {
     ]);
   });
 
+  // The map's own listener is added when the map boots, before any popup, so
+  // MapLibre runs it before the listener that closes the popup.
+  test("reports a map click after the close of the popup that click dismisses", async () => {
+    const handle = mountMap({
+      events: { click: { action: "select", target: "page" } },
+      defs: [
+        {
+          kind: "popup",
+          key: "details",
+          spec: { lngLat: [-69.9, 18.5] },
+          events: { close: { action: "clear", target: "page" } },
+          content: "<h3>Santo Domingo</h3>",
+        },
+      ],
+    });
+    const [popup] = handle.map.popups;
+
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["clear", "select"],
+    );
+    assert.deepEqual(dispatched[1][2].lng_lat, [0, 0]);
+    assert.deepEqual(dispatched[1][2].point, [0, 0]);
+  });
+
   test("reports a marker click to the marker alone, not to the map or a layer under it", async () => {
     const handle = mountMap({
       events: { click: { action: "map_clicked", target: "page" } },
