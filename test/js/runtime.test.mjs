@@ -790,6 +790,70 @@ describe("events", () => {
     });
   });
 
+  const OFFICE = {
+    kind: "marker",
+    key: "office",
+    spec: { lngLat: [-70.66, 19.45], popup: { html: "<p>Office</p>", options: {} } },
+    events: { click: { action: "office_clicked", target: "page" } },
+  };
+
+  test("opens a marker's popup on click, as well as dispatching its on_click", () => {
+    const { map } = mountMap({ defs: [OFFICE] });
+    const [marker] = map.markers;
+
+    marker.getElement().dispatchEvent({ type: "click" });
+
+    assert.deepEqual(dispatched, [["office_clicked", "page", { lng_lat: [-70.66, 19.45] }]]);
+    assert.ok(marker.getPopup().isOpen());
+  });
+
+  test("closes a close_on_click popup when a marker with on_click is clicked", () => {
+    const { map } = mountMap({ defs: [INFO, { ...OFFICE, spec: { lngLat: [-70.66, 19.45] } }] });
+    const [popup] = map.popups;
+    const [marker] = map.markers;
+    dispatched.length = 0;
+
+    marker.getElement().dispatchEvent({ type: "click" });
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["office_clicked", "closed"],
+    );
+  });
+
+  test("reports a marker click to the marker alone, not to the map or a layer under it", () => {
+    const handle = mountMap({
+      events: { click: { action: "map_clicked", target: "page" } },
+      defs: [
+        SOURCE,
+        { ...CIRCLES, events: { click: { action: "picked", target: "page" } } },
+        OFFICE,
+      ],
+    });
+    handle.map.loadStyle();
+    handle.map.featuresUnderPointer = {
+      "cities-circles": [{ id: 7, source: "cities", properties: {}, geometry: null }],
+    };
+    const [marker] = handle.map.markers;
+
+    marker.getElement().dispatchEvent({ type: "click" });
+
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["office_clicked"],
+    );
+
+    // A click anywhere else on the map still reaches both.
+    dispatched.length = 0;
+    handle.map.getCanvasContainer().dispatchEvent({ type: "click" });
+
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["map_clicked", "picked"],
+    );
+  });
+
   test("dispatches on_open when a popup first renders and when a change reopens it", async () => {
     const handle = mountMap({ defs: [INFO] });
     const [popup] = handle.map.popups;

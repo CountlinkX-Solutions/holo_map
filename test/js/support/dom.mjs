@@ -2,9 +2,10 @@
 //
 // The runtime touches a small slice of the DOM: elements with attributes and
 // children, `getElementById`, `querySelector(All)` with attribute and class
-// selectors, `innerHTML` as an opaque string, `isConnected`, DOM listeners and
-// MutationObserver. Implementing that slice here keeps the unit tests free of
-// any npm dependency, so `node --test` runs them on a fresh checkout.
+// selectors, `innerHTML` as an opaque string, `isConnected`, DOM listeners with
+// bubbling, and MutationObserver. Implementing that slice here keeps the unit
+// tests free of any npm dependency, so `node --test` runs them on a fresh
+// checkout.
 //
 // MutationObserver matters most: it is how the runtime learns that Hologram
 // patched a definition. Mutations are recorded synchronously and delivered in
@@ -132,14 +133,38 @@ class Element {
     );
   }
 
-  // Delivers a minimal event to this element's own listeners. Nothing bubbles:
-  // the runtime only listens on the marker element itself.
-  dispatchEvent(event) {
-    const delivered = { stopPropagation() {}, ...event, target: this };
+  // Like Node.contains, true for the node itself too.
+  contains(node) {
+    for (let current = node; current; current = current.parentNode) {
+      if (current === this) {
+        return true;
+      }
+    }
 
-    this.listeners
-      .filter((record) => record.name === delivered.type)
-      .forEach((record) => record.listener(delivered));
+    return false;
+  }
+
+  // Delivers a minimal event to this element's listeners, then bubbles it up
+  // through its ancestors until a listener stops it. Only the bubble phase is
+  // modelled: neither the runtime nor MapLibre's click handling captures.
+  dispatchEvent(event) {
+    let stopped = false;
+
+    const delivered = {
+      ...event,
+      target: this,
+      stopPropagation() {
+        stopped = true;
+      },
+    };
+
+    for (let node = this; node && !stopped; node = node.parentNode) {
+      delivered.currentTarget = node;
+
+      node.listeners
+        .filter((record) => record.name === delivered.type)
+        .forEach((record) => record.listener(delivered));
+    }
   }
 }
 

@@ -8,7 +8,9 @@
 //
 // MapLibre's events are driven by hand: `map.loadStyle()` plays a style
 // arriving, which wipes the style-scoped state and emits `style.load`, and
-// `fire()` emits any other event.
+// `fire()` emits any other event. Clicks can also go through the DOM: one
+// dispatched on a marker's element bubbles to the map's canvas container,
+// which turns it into the map's `click` as MapLibre does.
 
 // Every Map constructed, oldest first.
 export const maps = [];
@@ -67,7 +69,43 @@ class FakeMap extends Evented {
     this.popups = new Set();
     this.camera = { center: { lng: 0, lat: 0 }, zoom: 0, bearing: 0, pitch: 0 };
     this.removed = false;
+
+    // Features a test places under the pointer, by layer id, for the layer
+    // events a click delegates.
+    this.featuresUnderPointer = {};
+
+    // MapLibre builds this inside the container and puts marker elements in
+    // it. Its own `click` comes from DOM clicks that bubble up to it, through
+    // a listener in the bubble phase.
+    this.canvasContainer = document.createElement("div");
+    this.canvasContainer.className = "maplibregl-canvas-container";
+    this.canvasContainer.addEventListener("click", (event) => this.click(event));
+    options.container.appendChild(this.canvasContainer);
+
     maps.push(this);
+  }
+
+  getCanvasContainer() {
+    return this.canvasContainer;
+  }
+
+  // The map `click` MapLibre fires for a DOM click that reached the canvas
+  // container, then the layer `click`s it delegates from that same event for
+  // the features under the pointer. Nothing is projected: every click lands
+  // on the camera's centre.
+  click(originalEvent) {
+    const event = {
+      type: "click",
+      originalEvent,
+      point: { x: originalEvent.clientX ?? 0, y: originalEvent.clientY ?? 0 },
+      lngLat: this.camera.center,
+    };
+
+    this.fire("click", event);
+
+    Object.entries(this.featuresUnderPointer).forEach(([layer, features]) => {
+      this.fire("click", { ...event, features }, layer);
+    });
   }
 
   record(name, ...args) {
@@ -354,19 +392,25 @@ export class Marker extends Evented {
     return this.element;
   }
 
+  // MapLibre puts the element in the canvas container, and toggles the
+  // marker's popup from the map's own `click`, not from the element's.
   addTo(map) {
     this.map = map;
     map.markers.add(this);
+    map.getCanvasContainer().appendChild(this.element);
+    map.on("click", this.onMapClick);
     return this;
   }
 
-  // Takes the marker's popup off the map with it.
+  // Takes the marker's element and popup off the map with it.
   remove() {
     if (this.map) {
+      this.map.off("click", this.onMapClick);
       this.map.markers.delete(this);
     }
 
     this.map = null;
+    this.element.remove();
 
     if (this.popup) {
       this.popup.remove();
@@ -374,6 +418,14 @@ export class Marker extends Evented {
 
     return this;
   }
+
+  // MapLibre's _onMapClick: a map click that started on this marker's element
+  // toggles its popup.
+  onMapClick = (event) => {
+    if (this.popup && this.element.contains(event.originalEvent.target)) {
+      this.togglePopup();
+    }
+  };
 
   // Replacing or clearing the popup closes the one attached before.
   setPopup(popup) {
@@ -482,6 +534,13 @@ export class Popup extends Evented {
 
     this.map = map;
     map.popups.add(this);
+
+    // Of the ways MapLibre closes a popup on its own, only `closeOnClick` (on
+    // unless the options turn it off) is modelled.
+    if (!("closeOnClick" in this.options) || this.options.closeOnClick) {
+      map.on("click", this.onClose);
+    }
+
     // MapLibre splits `className` on single spaces when it builds the
     // container, so two spaces in a row reach classList as an empty name.
     const names = this.options.className ? this.options.className.split(" ") : [];
@@ -497,6 +556,7 @@ export class Popup extends Evented {
   // `close` fires only when the popup was on a map.
   remove() {
     if (this.map) {
+      this.map.off("click", this.onClose);
       this.map.popups.delete(this);
       this.map = null;
       this.classes = null;
@@ -505,6 +565,10 @@ export class Popup extends Evented {
 
     return this;
   }
+
+  onClose = () => {
+    this.remove();
+  };
 
   setMaxWidth(maxWidth) {
     this.options.maxWidth = maxWidth;
