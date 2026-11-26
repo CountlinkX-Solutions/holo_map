@@ -97,7 +97,9 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
     wrapper,
     map: maplibre.maps[maplibre.maps.length - 1],
     def,
-    add: (spec) => holder.appendChild(definition(cid, spec)),
+    // Appends a definition, or renders it just before the one keyed `before`.
+    add: (spec, before) =>
+      holder.insertBefore(definition(cid, spec), before === undefined ? null : def(before)),
     remove: (key, kind) => holder.removeChild(def(key, kind)),
     setSpec: (key, value, kind) =>
       def(key, kind).setAttribute("data-hm-spec", JSON.stringify(value)),

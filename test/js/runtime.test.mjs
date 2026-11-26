@@ -654,6 +654,187 @@ describe("layers waiting for their source", () => {
   });
 });
 
+// Layers stack in template order, `before_id` aside, and controls stack in a
+// corner in declared order, however late each one reaches the map.
+describe("order", () => {
+  const HIGHLIGHT = {
+    kind: "layer",
+    key: "cities-highlight",
+    spec: { type: "circle", source: "cities", paint: { "circle-radius": 9 } },
+  };
+
+  const HALO = { kind: "layer", key: "cities-halo", spec: { type: "circle", source: "cities" } };
+
+  // Circles beneath the labels, which are declared after them.
+  const CIRCLES_UNDER_LABELS = {
+    ...CIRCLES,
+    spec: { ...CIRCLES.spec, beforeId: "cities-labels" },
+  };
+
+  test("adds a layer rendered later at its place in the template", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.add(HIGHLIGHT, "cities-labels");
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), [
+      "cities-circles",
+      "cities-highlight",
+      "cities-labels",
+    ]);
+  });
+
+  test("re-adds a layer whose type changes at its place", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("cities-circles", { type: "heatmap", source: "cities" });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("keeps the layers of a rebuilt source where they were", async () => {
+    const handle = mountMap({
+      defs: [
+        SOURCE,
+        CIRCLES,
+        { kind: "source", key: "roads", spec: { type: "geojson", data: POINTS } },
+        { kind: "layer", key: "roads-lines", spec: { type: "line", source: "roads" } },
+        LABELS,
+      ],
+    });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "roads-lines", "cities-labels"]);
+
+    handle.setSpec("cities", { type: "geojson", data: POINTS, cluster: true });
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("removeSource"), [["cities"]]);
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "roads-lines", "cities-labels"]);
+  });
+
+  test("moves a layer when its before_id changes", async () => {
+    const handle = mountMap({ defs: [SOURCE, CIRCLES, LABELS] });
+    handle.map.loadStyle({
+      layers: [
+        { id: "water", type: "background" },
+        { id: "places", type: "background" },
+      ],
+    });
+
+    handle.setSpec("cities-circles", { ...CIRCLES.spec, beforeId: "places" });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["water", "cities-circles", "places", "cities-labels"]);
+
+    handle.setSpec("cities-circles", CIRCLES.spec);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["water", "places", "cities-circles", "cities-labels"]);
+    assert.deepEqual(handle.map.callsTo("removeLayer"), []);
+  });
+
+  test("puts a layer beneath a before_id layer declared after it", () => {
+    const { map } = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, HALO, LABELS] });
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-halo", "cities-circles", "cities-labels"]);
+  });
+
+  test("puts a layer beneath its before_id layer once that layer is rendered", async () => {
+    const handle = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, HALO] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-halo"]);
+
+    handle.add(LABELS);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-halo", "cities-circles", "cities-labels"]);
+  });
+
+  test("puts layers that share a before_id beneath it in declared order", async () => {
+    const underLabels = (layer) => ({
+      ...layer,
+      spec: { ...layer.spec, beforeId: "cities-labels" },
+    });
+    const handle = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, underLabels(HALO), HIGHLIGHT] });
+    handle.map.loadStyle();
+
+    handle.add(LABELS);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), [
+      "cities-highlight",
+      "cities-circles",
+      "cities-halo",
+      "cities-labels",
+    ]);
+  });
+
+  const control =(key, name, position, options = {}) => ({
+    kind: "control",
+    key,
+    spec: { control: name, position, ...options },
+  });
+
+  // The controls in a corner, top to bottom, by class.
+  const corner = (map, position) =>
+    map.controlsIn(position).map((each) => each.constructor.name);
+
+  test("keeps a control's place in its corner when an update replaces it", async () => {
+    const handle = mountMap({
+      defs: [
+        control("nav", "navigation", "top-right"),
+        control("full", "fullscreen", "top-right"),
+        control("scale", "scale", "bottom-left"),
+        control("attribution", "attribution", "bottom-left"),
+      ],
+    });
+
+    // A bottom corner stacks upwards: the first declared sits at the edge.
+    assert.deepEqual(corner(handle.map, "top-right"), ["NavigationControl", "FullscreenControl"]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), ["AttributionControl", "ScaleControl"]);
+
+    handle.setSpec("nav", { control: "navigation", position: "top-right", showCompass: false });
+    handle.setSpec("scale", { control: "scale", position: "bottom-left", unit: "imperial" });
+    await settle();
+
+    assert.deepEqual(corner(handle.map, "top-right"), ["NavigationControl", "FullscreenControl"]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), ["AttributionControl", "ScaleControl"]);
+    assert.deepEqual(handle.map.controlsIn("top-right")[0].options, { showCompass: false });
+    assert.deepEqual(handle.map.controlsIn("bottom-left")[1].options, { unit: "imperial" });
+  });
+
+  test("adds a control rendered later at its place in its corner", async () => {
+    const handle = mountMap({
+      defs: [
+        control("nav", "navigation", "top-right"),
+        control("locate", "geolocate", "top-right"),
+        control("scale", "scale", "bottom-left"),
+        control("attribution", "attribution", "bottom-left"),
+      ],
+    });
+
+    handle.add(control("full", "fullscreen", "top-right"), "locate");
+    handle.add(control("globe", "globe", "bottom-left"), "attribution");
+    await settle();
+
+    assert.deepEqual(corner(handle.map, "top-right"), [
+      "NavigationControl",
+      "FullscreenControl",
+      "GeolocateControl",
+    ]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), [
+      "AttributionControl",
+      "GlobeControl",
+      "ScaleControl",
+    ]);
+  });
+});
+
 describe("kind change", () => {
   test("replaces the object when a key is reused for a different kind", async () => {
     const handle = mountMap({ defs: [{ kind: "marker", key: "spot", spec: { lngLat: [0, 0] } }] });

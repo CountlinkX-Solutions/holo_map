@@ -25,9 +25,10 @@ defmodule HoloMap.Layer.Base do
   It renders one definition element whose `data-hm-spec` is a MapLibre layer
   object. When a prop changes, the reconciler picks the narrowest update
   available: `setPaintProperty` for a paint change, `setLayoutProperty` for
-  layout, `setFilter` for a filter, `setLayerZoomRange` for a zoom range. Only
-  a change to `type`, `source` or `source_layer`, none of which MapLibre can
-  change in place, forces a remove-and-re-add.
+  layout, `setFilter` for a filter, `setLayerZoomRange` for a zoom range,
+  `moveLayer` for `before_id`. Only a change to `type`, `source` or
+  `source_layer`, none of which MapLibre can change in place, forces a
+  remove-and-re-add, and the layer goes back to its place in the stack.
   """
 
   @spec_keys [

@@ -60,9 +60,9 @@ you hit one, and it is worth reporting.
 
 ## Controls are replaced, not updated
 
-Changing any prop on a control removes and re-adds it. That is invisible for the
-built-ins, but it means a control is not the place to put a rapidly changing
-value.
+Changing any prop on a control removes and re-adds it, in its place in its
+corner. That is invisible for the built-ins, but it means a control is not the
+place to put a rapidly changing value.
 
 The definition key includes the control's `position`, because MapLibre cannot
 move a control between corners in place.
@@ -73,7 +73,7 @@ Only a GeoJSON source's `data` and an image source's `url`/`coordinates` update
 in place. Any other source key (cluster settings, tile URLs, zoom ranges) is
 structural: MapLibre refuses to remove a source that still has layers attached,
 so the reconciler detaches the layers it owns, rebuilds the source, and re-adds
-them in declared order.
+them where they were in the stack.
 
 It works, and it is not free. Put frequently-changing data in `data`.
 

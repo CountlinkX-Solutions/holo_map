@@ -56,6 +56,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the layers of a source that was removed and rendered again all stayed
   missing. Such a layer now waits for its source and is added, in declared
   order, as soon as the source is.
+- Layers and controls kept their declared order only on first load. A layer
+  rendered conditionally, re-added because its `type`, `source` or
+  `source_layer` changed, or re-added by a structural source change went on top
+  of every other layer; a changed `before_id` was ignored; and a `before_id`
+  naming a layer declared further down, or not rendered yet, was dropped for
+  good. Each layer is now placed where the template puts it, a `before_id`
+  change moves the layer, and a `before_id` takes effect once the layer it
+  names is on the map. A control rendered conditionally, or replaced by a prop
+  change, went to the far end of its corner; it now goes back to its declared
+  place, and the controls around it are left as they are.
 
 ## [0.1.0] - 2026-08-23
 

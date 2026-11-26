@@ -28,16 +28,20 @@ defmodule HoloMap.Layer do
   | `layout` | map | Layout properties, dasherized the same way |
   | `filter` | list | A MapLibre filter expression |
   | `min_zoom` / `max_zoom` | number | Zoom range |
-  | `before_id` | string | Insert beneath this layer. Ignored if that layer is absent |
+  | `before_id` | string | Insert beneath this layer. Ignored while that layer is absent |
   | `visible` | boolean | Convenience for `layout.visibility` |
   | `metadata` | map | Arbitrary data carried on the layer |
 
   ## Ordering
 
-  Layers stack in the order MapLibre received them, which is the order the
-  components appear in the template. `before_id` overrides that when a layer
-  has to sit beneath one it is not written next to, such as a highlight layer under a
-  label layer that belongs to the base style, for example.
+  Layers stack in the order the components appear in the template. That holds
+  for a layer rendered conditionally, one re-added because its `type`, `source`
+  or `source_layer` changed, and the layers of a rebuilt source: each goes back
+  to its place rather than on top. `before_id` overrides that when a layer has
+  to sit beneath one it is not written next to, such as a highlight layer under a
+  label layer that belongs to the base style, for example. It can name a layer
+  declared further down, or one rendered later, and takes effect once that
+  layer is on the map. Changing `before_id` moves the layer.
 
   ## Events
 
