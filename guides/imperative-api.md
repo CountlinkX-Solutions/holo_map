@@ -13,12 +13,19 @@ whole point. That is the category `HoloMap.API` exists for.
 | The camera reflects application state | `HoloMap.Map`'s `center` / `zoom` props |
 | The camera should animate in response to an event | `fly_to/2`, `ease_to/2` |
 | A layer's paint reflects state | `HoloMap.Layer.*`'s `paint` prop |
-| A one-off highlight that should not survive a re-render | `set_paint_property/4` |
+| A one-off highlight your state does not track | `set_paint_property/4` |
 | Hover and selection styling | `set_feature_state/3` |
 
-Anything set imperatively is overwritten the next time the declarative
-specification for that object changes. The reconciler treats rendered props as
-the source of truth.
+An imperative change lasts until the reconciler sets the same thing from the
+props. A paint or layout property is set again when that property's declared
+value changes, a filter when the declared `filter` changes, and the camera when
+a declared `center`, `zoom`, `bearing` or `pitch` changes, in which case only
+the values that changed are set. A change to any other prop leaves the
+imperative value in place, so an imperative `fill-color` survives a new
+`fill-opacity` or `filter`. A layer that is added again, because its `type`,
+`source` or `source_layer` changed, its source was rebuilt or the style
+changed, comes back as declared. The reconciler treats rendered props as the
+source of truth.
 
 ## Calling it
 
@@ -88,8 +95,9 @@ Property names may be atoms in Elixir style or MapLibre specification names;
 both reach MapLibre as the latter.
 
 These duplicate what the `paint`, `layout` and `filter` props already do, and in
-almost every case the props are the better choice, because they survive a re-render.
-Reach here for something genuinely transient.
+almost every case the props are the better choice: a layer added again after a
+style change or a structural source change gets its props back, and loses
+whatever was set here. Reach here for something genuinely transient.
 
 ## Feature state
 

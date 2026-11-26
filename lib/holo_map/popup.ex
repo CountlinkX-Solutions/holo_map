@@ -77,9 +77,14 @@ defmodule HoloMap.Popup do
 
   ## Events
 
-  `on_open` fires when the popup is added to the map, `on_close` when it leaves
-  it, including every close MapLibre performs on its own. Neither carries a
-  payload.
+  `on_open` fires when the popup is added to the map: when it first renders,
+  and when a changed declaration reopens a popup MapLibre had closed.
+  `on_close` fires for every close MapLibre performs on its own. Neither fires
+  when the application stops rendering the popup, since that close already
+  comes from its own state, nor when a change to `anchor`, `close_button`,
+  `close_on_click`, `close_on_move` or `focus_after_open` replaces an open
+  popup with one built with the new options: the popup stays open throughout.
+  Neither carries a payload.
 
   > #### Slot content is cloned {: .warning}
   >

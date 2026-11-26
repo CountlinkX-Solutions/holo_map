@@ -11,11 +11,11 @@ defmodule HoloMap.Def do
 
   | Attribute | Meaning |
   | --------- | ------- |
-  | `data-hm` | The kind of definition: `source`, `layer`, `marker`, `popup`, `control`, `terrain`, `sky` |
+  | `data-hm` | The kind of definition: `map` (rendered by `HoloMap.Map` itself), `source`, `layer`, `image`, `marker`, `popup`, `control`, `terrain`, `sky` |
   | `data-hm-key` | Identity, unique among definitions of the same kind: a source and a layer may share one. Stable across re-renders; changing it is a remove plus an add |
   | `data-hm-spec` | The MapLibre specification, JSON-encoded |
   | `data-hm-events` | Event name to action-dispatch descriptor, JSON-encoded |
-  | `data-hm-map` | The cid of the owning map. Debugging aid; the reconciler uses DOM containment |
+  | `data-hm-map` | The cid of the owning map. The reconciler acts only on definitions that name its map: during a client-side navigation Hologram patches the outgoing page's elements into the incoming page's, so containment alone does not show which map a definition belongs to |
 
   You only need this module to write a definition component of your own. See
   `__using__/1`. Using the components in `HoloMap` requires none of it.

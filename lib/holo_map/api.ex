@@ -29,11 +29,17 @@ defmodule HoloMap.API do
   | The camera reflects application state | `HoloMap.Map`'s `center`/`zoom` props |
   | The camera should animate in response to an event | `fly_to/2`, `ease_to/2` |
   | A layer's paint reflects state | `HoloMap.Layer.*`'s `paint` prop |
-  | A one-off highlight that should not survive a re-render | `set_paint_property/4` |
+  | A one-off highlight your state does not track | `set_paint_property/4` |
 
-  Anything set imperatively is overwritten the next time the declarative
-  specification for that object changes. The reconciler treats the rendered
-  props as the source of truth.
+  An imperative change lasts until the reconciler sets the same thing from the
+  props: a paint or layout property when that property's declared value
+  changes, a filter when the declared `filter` changes, and the camera when a
+  declared `center`, `zoom`, `bearing` or `pitch` changes, which sets only the
+  values that changed. A change to any other prop leaves it in place, so an
+  imperative `fill-color` survives a new `fill-opacity` or `filter`. A layer
+  that is added again, because its `type`, `source` or `source_layer` changed,
+  its source was rebuilt or the style changed, comes back as declared. The
+  reconciler treats the rendered props as the source of truth.
   """
 
   alias HoloMap.Runtime
