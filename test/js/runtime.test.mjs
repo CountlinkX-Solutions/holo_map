@@ -297,6 +297,34 @@ describe("add", () => {
     assert.deepEqual(popup.options, { maxWidth: "240px" });
   });
 
+  // MapLibre splits a class name on single spaces and hands every piece to
+  // classList.add, which throws for an empty one.
+  test("builds markers and popups whose class_name has spaces around or between names", async () => {
+    const className = "  depot   busy ";
+    const popup = { html: "<p>Depot</p>", options: { className } };
+    const { map } = mountMap({
+      defs: [
+        { kind: "marker", key: "pin", spec: { lngLat: [0, 0], className, popup } },
+        { kind: "marker", key: "badge", spec: { lngLat: [1, 1], className }, content: "<b>3</b>" },
+        { kind: "popup", key: "info", spec: { lngLat: [2, 2], html: "<p>Hi</p>", className } },
+      ],
+    });
+
+    assert.equal(map.markers.size, 2);
+
+    const [pin, badge] = map.markers;
+    const [info] = map.popups;
+
+    assert.deepEqual([...pin.classes], ["depot", "busy"]);
+    assert.deepEqual([...badge.classes], ["depot", "busy"]);
+    assert.equal(badge.getElement().className, "holo-map-marker depot busy");
+    assert.deepEqual([...info.classes], ["depot", "busy"]);
+
+    // The marker's own popup, from popup_options, opens on a click.
+    await userClick(pin.getElement());
+    assert.deepEqual([...pin.getPopup().classes], ["depot", "busy"]);
+  });
+
   test("applies a definition that appears after the style loaded straight away", async () => {
     const handle = loadedCitiesMap();
     const regions = { type: "geojson", data: POINTS };
@@ -484,6 +512,26 @@ describe("update", () => {
     ]);
   });
 
+  // MapLibre lifts its default pin so that its tip is on the coordinate.
+  test("gives a marker whose offset is removed the offset MapLibre gave it", async () => {
+    const offset = [4, 8];
+    const handle = mountMap({
+      defs: [
+        { kind: "marker", key: "pin", spec: { lngLat: [0, 0], offset } },
+        { kind: "marker", key: "badge", spec: { lngLat: [1, 1], offset }, content: "<b>3</b>" },
+      ],
+    });
+    const [pin, badge] = handle.map.markers;
+
+    handle.setSpec("pin", { lngLat: [0, 0] });
+    handle.setSpec("badge", { lngLat: [1, 1] });
+    await settle();
+
+    assert.deepEqual([...handle.map.markers], [pin, badge]);
+    assert.deepEqual(pin.offset, [0, -14]);
+    assert.deepEqual(badge.offset, [0, 0]);
+  });
+
   test("replaces a marker whose colour changes", async () => {
     const handle = mountMap({
       defs: [{ kind: "marker", key: "pin", spec: { lngLat: [0, 0], color: "#e11d48" } }],
@@ -577,6 +625,45 @@ describe("update", () => {
     assert.deepEqual([...handle.map.popups], [after]);
   });
 
+  // MapLibre takes a marker's popup off the map with the marker, and a marker
+  // whose slot content or colour follows state is replaced on every change.
+  test("keeps a replaced marker's popup open or closed, as the user left it", async () => {
+    const popup = { html: "<p>Depot</p>", options: {} };
+    const spec = { lngLat: [0, 0], color: "#e11d48", popup };
+    const handle = mountMap({
+      defs: [
+        {
+          kind: "marker",
+          key: "pin",
+          spec,
+          events: { click: { action: "picked", target: "page" } },
+        },
+      ],
+    });
+
+    handle.setSpec("pin", { ...spec, color: "#2563eb" });
+    await settle();
+
+    const [closed] = handle.map.markers;
+    assert.ok(!closed.getPopup().isOpen());
+
+    await userClick(closed.getElement());
+    dispatched.length = 0;
+    handle.setSpec("pin", { ...spec, color: "#16a34a" });
+    await settle();
+
+    const [after] = handle.map.markers;
+    assert.notEqual(after, closed);
+    assert.ok(after.getPopup().isOpen());
+    assert.equal(after.getPopup().html, "<p>Depot</p>");
+    assert.deepEqual([...handle.map.popups], [after.getPopup()]);
+    assert.deepEqual(dispatched, []);
+
+    // It is the new marker's popup: a click on the marker still closes it.
+    await userClick(after.getElement());
+    assert.ok(!after.getPopup().isOpen());
+  });
+
   test("applies a popup's width, offset, class and subpixel changes in place", async () => {
     const spec = { lngLat: [0, 0], html: "<p>Hi</p>" };
     const handle = mountMap({
@@ -610,6 +697,37 @@ describe("update", () => {
     assert.deepEqual([...popup.classes], []);
     assert.equal(popup.options.subpixelPositioning, false);
     assert.deepEqual(dispatched, []);
+  });
+
+  // setHTML rebuilds the content, so a popup following a moving feature would
+  // lose its scroll position and take focus back on every move.
+  test("rewrites an open popup's content only when its content changes", async () => {
+    const handle = mountMap({
+      defs: [{ kind: "popup", key: "info", spec: { lngLat: [0, 0] }, content: "<p>One</p>" }],
+    });
+    const [popup] = handle.map.popups;
+    popup.calls.length = 0;
+
+    handle.setSpec("info", { lngLat: [1, 1], maxWidth: "320px" });
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    assert.deepEqual(popup.lngLat, [1, 1]);
+    assert.deepEqual(popup.calls, []);
+
+    handle.def("info").querySelector("[data-hm-content]").innerHTML = "<p>Two</p>";
+    await settle();
+    handle.setSpec("info", { lngLat: [1, 1], maxWidth: "320px", html: "<p>Three</p>" });
+    await settle();
+    // `html` wins over the slot, so a slot change leaves the content as it is.
+    handle.def("info").querySelector("[data-hm-content]").innerHTML = "<p>Four</p>";
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    assert.deepEqual(popup.calls, [
+      ["setHTML", "<p>Two</p>"],
+      ["setHTML", "<p>Three</p>"],
+    ]);
   });
 
   test("replaces an open popup whose close options change, reporting no close or open", async () => {
@@ -910,7 +1028,38 @@ describe("image loads", () => {
     b.finish();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("c") });
+    assert.equal(handle.map.images.get("pin").image.url, icon("c"));
+  });
+
+  // MapLibre's updateImage refuses an image whose size differs from the one
+  // registered, and leaves that one in place.
+  test("updates an image whose new URL has the same size, and replaces one of another", async () => {
+    const options = { pixelRatio: 2 };
+    const handle = mountMap({
+      defs: [{ kind: "image", key: "pin", spec: { url: icon("a"), ...options } }],
+    });
+    handle.map.imageSizes[icon("wide")] = { width: 64, height: 32 };
+    handle.map.loadStyle();
+    await settle();
+
+    const changes = ["addImage", "updateImage", "removeImage"];
+    handle.map.calls.length = 0;
+    handle.setSpec("pin", { url: icon("b"), ...options }, "image");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, changes), [["updateImage", "pin"]]);
+    assert.equal(handle.map.images.get("pin").image.url, icon("b"));
+
+    handle.map.calls.length = 0;
+    handle.setSpec("pin", { url: icon("wide"), ...options }, "image");
+    await settle();
+
+    assert.equal(handle.map.images.get("pin").image.url, icon("wide"));
+    assert.deepEqual(handle.map.images.get("pin").options, options);
+    assert.deepEqual(sequence(handle.map, changes), [
+      ["removeImage", "pin"],
+      ["addImage", "pin"],
+    ]);
   });
 
   test("does not register an image whose definition was removed while it loaded", async () => {
@@ -929,7 +1078,7 @@ describe("image loads", () => {
     handle.map.heldImages[1].finish();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("b") });
+    assert.equal(handle.map.images.get("pin").image.url, icon("b"));
   });
 });
 
@@ -1211,7 +1360,7 @@ describe("shared ids", () => {
     handle.map.loadStyle();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("stops").image, { url: "https://tiles.test/stop.png" });
+    assert.equal(handle.map.images.get("stops").image.url, "https://tiles.test/stop.png");
     assert.ok(handle.map.getSource("stops"));
     assert.deepEqual(handle.map.layerIds(), ["stops"]);
   });
@@ -1406,6 +1555,60 @@ describe("style reload", () => {
 
     assert.deepEqual(handle.map.layerIds(), []);
   });
+
+  // The id stays the style's until the style changes again, so nothing the
+  // component of that id does reaches the style's source.
+  test("leaves a source the new style took over to it when its component changes or goes", async () => {
+    const handle = mountMap({ defs: [SOURCE] });
+    handle.map.loadStyle();
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.loadStyle({ sources: { cities: { type: "geojson", data: POINTS } } });
+    const theirs = handle.map.getSource("cities");
+    handle.map.calls.length = 0;
+
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS }, "source");
+    await settle();
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS, cluster: true }, "source");
+    await settle();
+    handle.remove("cities", "source");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, ["setData", "removeSource", "addSource"]), []);
+    assert.equal(handle.map.getSource("cities"), theirs);
+  });
+
+  test("leaves a layer the new style took over to it, whatever its component does", async () => {
+    const circles = { ...CIRCLES, spec: { ...CIRCLES.spec, beforeId: "water" } };
+    const labels = { ...LABELS, spec: { ...LABELS.spec, beforeId: "cities-circles" } };
+    const handle = mountMap({ defs: [SOURCE, circles, labels] });
+    handle.map.loadStyle();
+    handle.setSpec("map", { style: DARK });
+    await settle();
+
+    const theirs = { id: "cities-labels", type: "background", paint: {}, layout: {} };
+    handle.map.loadStyle({ layers: [{ id: "water", type: "background" }, theirs] });
+
+    // Its component's before_id does not move it.
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "water", "cities-labels"]);
+
+    handle.map.calls.length = 0;
+    const layout = { "text-field": ["get", "name"], "text-size": 14 };
+    handle.setSpec("cities-labels", { ...labels.spec, layout }, "layer");
+    await settle();
+    // A structural change to the source takes its own layers off and back on.
+    handle.setSpec("cities", { ...SOURCE.spec, cluster: true }, "source");
+    await settle();
+    handle.remove("cities-labels", "layer");
+    await settle();
+
+    const touched = handle.map.calls.filter(
+      ([, target]) => target === "cities-labels" || (target && target.id === "cities-labels"),
+    );
+    assert.deepEqual(touched, []);
+    assert.equal(handle.map.getLayer("cities-labels").type, "background");
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "water", "cities-labels"]);
+  });
 });
 
 describe("events", () => {
@@ -1506,6 +1709,8 @@ describe("events", () => {
       { lngLat: { lng: -69.9, lat: 18.5 }, point: { x: 120, y: 80 }, features: [feature] },
       "cities-circles",
     );
+    // A click is reported once the DOM click has finished.
+    await nextTask();
 
     assert.deepEqual(dispatched, [
       [
@@ -1645,6 +1850,39 @@ describe("events", () => {
     ]);
   });
 
+  // The same pattern with features: the popup opens once a feature has been
+  // selected, so after the layer's listener was added, and MapLibre runs the
+  // listeners of the map's `click` in the order they were added.
+  test("reports a layer click after the close of the popup that click dismisses", async () => {
+    const handle = mountMap({
+      defs: [SOURCE, { ...CIRCLES, events: { click: { action: "select", target: "page" } } }],
+    });
+    handle.map.loadStyle();
+    handle.add({
+      kind: "popup",
+      key: "details",
+      spec: { lngLat: [-69.9, 18.5] },
+      events: { close: { action: "clear", target: "page" } },
+      content: "<h3>Santo Domingo</h3>",
+    });
+    await settle();
+
+    const [popup] = handle.map.popups;
+    const santiago = { id: 2, properties: { name: "Santiago" }, geometry: null };
+    handle.map.featuresUnderPointer = { "cities-circles": [santiago] };
+
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["clear", "select"],
+    );
+    assert.deepEqual(dispatched[1][2].features, [
+      { id: 2, source: null, source_layer: null, properties: { name: "Santiago" }, geometry: null },
+    ]);
+  });
+
   test("reports a marker click to the marker alone, not to the map or a layer under it", async () => {
     const handle = mountMap({
       events: { click: { action: "map_clicked", target: "page" } },
@@ -1670,6 +1908,7 @@ describe("events", () => {
     // A click anywhere else on the map still reaches both.
     dispatched.length = 0;
     handle.map.getCanvasContainer().dispatchEvent({ type: "click" });
+    await nextTask();
 
     assert.deepEqual(
       dispatched.map(([action]) => action),
@@ -1734,5 +1973,70 @@ describe("teardown", () => {
 
     assert.ok(handle.map.removed);
     assert.equal(runtime.instance(handle.cid), null);
+  });
+
+  // destroy/1 is for a map whose container stays on the page, so nothing is
+  // going to boot for a call made after it.
+  test("warns at once about a call for a destroyed map, and keeps nothing", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap();
+      runtime.destroy(handle.cid);
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+
+      assert.equal(logged.warnings.length, 1);
+      assert.match(logged.warnings[0], new RegExp(`"${handle.cid}" was destroyed`));
+      assert.match(logged.warnings[0], /jumpTo\(\)/);
+
+      // No later warning, and the map booted again does not get the call,
+      // only the ones made for it.
+      mock.timers.tick(5000);
+      handle.boot();
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 6 }]);
+      handle.map.loadStyle();
+
+      assert.equal(logged.warnings.length, 1);
+      assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 6 }, {}]]);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  // A page that renders the map again runs its own `init` action before the
+  // map's boot, as on the first visit.
+  test("holds the calls for a map rendered again under the cid of a destroyed one", async () => {
+    const first = mountMap();
+    runtime.destroy(first.cid);
+    first.wrapper.remove();
+    await settle();
+
+    const again = mountMap({ cid: first.cid, boot: false });
+    runtime.invoke(again.cid, "jumpTo", [{ zoom: 4 }]);
+    again.boot();
+    again.map.loadStyle();
+
+    assert.deepEqual(again.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  // Hologram patches elements in place, so the next page can turn the same
+  // element into something else and a later one turn it back into the map's.
+  test("holds the calls for a destroyed map whose container a page patched away and back", async () => {
+    const handle = mountMap();
+    runtime.destroy(handle.cid);
+
+    handle.container.id = "page-header";
+    handle.wrapper.appendChild(document.createElement("p"));
+    await settle();
+
+    handle.container.id = `hm--${handle.cid}`;
+    runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+    handle.boot();
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+    assert.deepEqual(logged.warnings, []);
   });
 });

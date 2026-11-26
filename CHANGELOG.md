@@ -109,6 +109,50 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   still named another map during a navigation. Boot now waits a frame at a
   time for both the container and a definition that names the map, and gives
   up with a warning after 60 frames.
+- A `HoloMap.Marker`'s `popup_html` popup that the user had opened closed
+  whenever a change to the slot content, `color`, `scale`, `class_name`,
+  `anchor` or `click_tolerance` replaced the MapLibre marker, so a marker whose
+  content follows state closed its own popup on every change. It is now opened
+  again on the new marker; a popup the user had not opened stays closed.
+- Removing `offset` from a `HoloMap.Marker` drawn as MapLibre's default pin set
+  its offset to `[0, 0]`, which moved the tip of the pin off its coordinate.
+  It now goes back to MapLibre's own offset for the pin, `[0, -14]`; a marker
+  with slot content still goes back to `[0, 0]`.
+- A `class_name` with a leading, trailing or repeated space kept a
+  `HoloMap.Marker` or `HoloMap.Popup` off the map, and a `popup_options` one
+  kept the marker's popup from opening: MapLibre splits it on single spaces and
+  the browser refuses the empty class name between two of them. The names now
+  reach MapLibre separated by single spaces.
+- Every change to an open `HoloMap.Popup` rewrote its content, even a change to
+  `lng_lat` alone, so a popup following a moving feature lost its scroll
+  position and text selection on every move and, with `focus_after_open`, took
+  keyboard focus back. The content is now rewritten only when `html` or the
+  slot content changes what the popup shows.
+- A layer's `on_click` was dispatched before the `on_close` of a
+  `close_on_click` popup that the same click closed, whenever the popup had
+  opened after the layer was added, which is the usual case for a popup
+  showing a selected feature. A popup whose `on_close` clears the selection
+  therefore undid the selection made by clicking another feature. A layer's
+  `on_click` is now dispatched once the click has finished, as a marker's is.
+- Changing a `HoloMap.Image`'s `url` to an image of another size left the old
+  image in place and logged an error, because MapLibre's `updateImage` accepts
+  only an image of the same size. Such an image is now registered again, with
+  the same options; one of the same size is still updated in place.
+- When a new style already defined a source or layer with a component's `id`,
+  the runtime left that id to the style with a warning, but went on treating it
+  as its own: removing the component removed the style's source, a data or
+  structural change to it rewrote or replaced the style's source, a prop change
+  to a layer component changed the style's layer, a structural change to a
+  source took the style's layer of a layer component's `id` off the map and put
+  the component's back, and a `before_id` moved the style's layer. Until the
+  style changes again, such a component now leaves the style's source or layer
+  alone.
+- Since calls made before a map boots are queued, a `HoloMap.API` call for a
+  map torn down with `HoloMap.Runtime.destroy/1` waited five seconds before it
+  was dropped with a warning. It is now dropped at once, with a warning naming
+  the destroyed map. Calls are queued again once the map boots again, or once a
+  page has moved its container away, so a page that renders the map again still
+  hands it the calls made before its boot.
 
 ## [0.1.0] - 2026-08-23
 
