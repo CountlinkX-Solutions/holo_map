@@ -109,6 +109,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   still named another map during a navigation. Boot now waits a frame at a
   time for both the container and a definition that names the map, and gives
   up with a warning after 60 frames.
+- A `HoloMap.Marker`'s `popup_html` popup that the user had opened closed
+  whenever a change to the slot content, `color`, `scale`, `class_name`,
+  `anchor` or `click_tolerance` replaced the MapLibre marker, so a marker whose
+  content follows state closed its own popup on every change. It is now opened
+  again on the new marker; a popup the user had not opened stays closed.
 
 ## [0.1.0] - 2026-08-23
 

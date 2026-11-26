@@ -577,6 +577,45 @@ describe("update", () => {
     assert.deepEqual([...handle.map.popups], [after]);
   });
 
+  // MapLibre takes a marker's popup off the map with the marker, and a marker
+  // whose slot content or colour follows state is replaced on every change.
+  test("keeps a replaced marker's popup open or closed, as the user left it", async () => {
+    const popup = { html: "<p>Depot</p>", options: {} };
+    const spec = { lngLat: [0, 0], color: "#e11d48", popup };
+    const handle = mountMap({
+      defs: [
+        {
+          kind: "marker",
+          key: "pin",
+          spec,
+          events: { click: { action: "picked", target: "page" } },
+        },
+      ],
+    });
+
+    handle.setSpec("pin", { ...spec, color: "#2563eb" });
+    await settle();
+
+    const [closed] = handle.map.markers;
+    assert.ok(!closed.getPopup().isOpen());
+
+    await userClick(closed.getElement());
+    dispatched.length = 0;
+    handle.setSpec("pin", { ...spec, color: "#16a34a" });
+    await settle();
+
+    const [after] = handle.map.markers;
+    assert.notEqual(after, closed);
+    assert.ok(after.getPopup().isOpen());
+    assert.equal(after.getPopup().html, "<p>Depot</p>");
+    assert.deepEqual([...handle.map.popups], [after.getPopup()]);
+    assert.deepEqual(dispatched, []);
+
+    // It is the new marker's popup: a click on the marker still closes it.
+    await userClick(after.getElement());
+    assert.ok(!after.getPopup().isOpen());
+  });
+
   test("applies a popup's width, offset, class and subpixel changes in place", async () => {
     const spec = { lngLat: [0, 0], html: "<p>Hi</p>" };
     const handle = mountMap({
