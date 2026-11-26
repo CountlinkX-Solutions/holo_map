@@ -131,21 +131,22 @@ Playwright. See the README there for what it covers and why.
 
 Two workflows, split by what they depend on.
 
-`ci.yml` runs on every push to `main` and on every pull request: compile with
-warnings as errors, formatter, Credo strict, ExUnit, the runtime's unit tests
-under Node (see the Architecture guide), docs, Dialyzer, and a build of the demo
-with the Hologram compiler. The demo depends on the library by path, so that build
+`ci.yml` runs when a change lands on `main`, and on demand for any branch. Pull
+requests do not start a run. It covers: compile with warnings as errors,
+formatter, Credo strict, ExUnit, the runtime's unit tests under Node (see the
+Architecture guide), docs, Dialyzer, and a build of the demo with the Hologram
+compiler. The demo depends on the library by path, so that build
 catches a change that breaks a component's template or props, or that uses
 Elixir Hologram cannot run in the browser. It needs Hex and npm, and no browser
 or tile server.
 
-`browser.yml` runs the five Playwright suites weekly, and on demand. It is
+`browser.yml` runs the five Playwright suites on demand only. It is
 deliberately not on every push: those suites drive a real MapLibre instance
 against real tile servers, including OpenStreetMap's, whose usage policy asks
 that automated traffic stay modest. Putting someone else's infrastructure in
 this project's critical path would make the build fail for reasons unrelated to
-the change. Weekly catches a MapLibre release or a moved asset; the manual
-trigger covers a change that actually touches the runtime.
+the change. Run it by hand for a change that actually touches the runtime, or
+to check a new MapLibre release.
 
 ## Licence
 

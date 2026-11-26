@@ -176,7 +176,7 @@ the BEAM:
   `getPaintProperty` and `getFilter`, reached via `window.HoloMap.map/1`.
 
 The split is forced: Hologram's JS interop is a no-op on the server, so no
-amount of ExUnit reaches `runtime.mjs`. The unit tests run on every push to
-`main` and on every pull request; only the browser suite shows that MapLibre
+amount of ExUnit reaches `runtime.mjs`. The unit tests run when a change
+lands on `main`; only the browser suite shows that MapLibre
 accepts what the reconciler hands it. Both navigation bugs above were found by
 the browser suite and are pinned there.
