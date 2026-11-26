@@ -94,6 +94,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `"page"`. Such calls are now queued and run in order once the map's style has
   loaded; calls for a map that has not booted within five seconds are dropped
   with a warning.
+- `HoloMap.Map`'s `on_error` received the camera but not the error. Its payload
+  now also has an `error` map with the `message`, plus the HTTP `status` and
+  `url` of a failed request and the `source_id` of a source's error when
+  MapLibre reports them. Only plain values cross into Elixir.
 
 ## [0.1.0] - 2026-08-23
 

@@ -64,10 +64,25 @@ arrive in your handler as atoms, as they do for any Hologram action.
 | `bounds` | `[[w, s], [e, n]]` | The visible extent |
 | `lng_lat` | `[lng, lat]` | Pointer events only |
 | `point` | `[x, y]` | Pointer events only, in pixels |
+| `error` | map | `on_error` only. What failed, see below |
 
 ```elixir
 def action(:map_moved, params, component) do
   put_state(component, :bounds, params.bounds)
+end
+```
+
+`error` always has a `message`. A failed request (a style, a tile, a sprite)
+adds its HTTP `status` and `url`, and an error a source reported adds the
+source's `source_id`:
+
+```elixir
+def action(:map_failed, %{error: %{source_id: "dem"} = error}, component) do
+  put_state(component, :notice, "Elevation tiles are unavailable: #{error.message}")
+end
+
+def action(:map_failed, params, component) do
+  put_state(component, :notice, params.error.message)
 end
 ```
 

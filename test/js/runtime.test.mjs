@@ -1335,6 +1335,49 @@ describe("events", () => {
     assert.deepEqual(dispatched, []);
   });
 
+  test("gives on_error what failed, as plain values, next to the camera", () => {
+    const handle = mountMap({ events: { error: { action: "failed", target: "page" } } });
+    const camera = {
+      center: [0, 0],
+      zoom: 0,
+      bearing: 0,
+      pitch: 0,
+      bounds: [
+        [-10, -5],
+        [10, 5],
+      ],
+    };
+
+    // A tile request that failed, as MapLibre reports it: an AJAXError, with
+    // the source's id and the tile, which refers back to its own source.
+    const url = "https://dem.test/1/0/0.png";
+    const error = Object.assign(new Error(`AJAXError: Not Found (404): ${url}`), {
+      status: 404,
+      statusText: "Not Found",
+      url,
+      body: new Blob([]),
+    });
+    const tile = { tileID: { z: 1, x: 0, y: 0 } };
+    tile.self = tile;
+
+    handle.map.fire("error", { type: "error", error, sourceId: "dem", tile });
+    // A style that failed validation reports a message alone.
+    handle.map.fire("error", { type: "error", error: new Error("layers.x: unknown type") });
+
+    assert.deepEqual(dispatched, [
+      [
+        "failed",
+        "page",
+        {
+          ...camera,
+          error: { message: error.message, status: 404, url, source_id: "dem" },
+        },
+      ],
+      ["failed", "page", { ...camera, error: { message: "layers.x: unknown type" } }],
+    ]);
+    assert.deepEqual(JSON.parse(JSON.stringify(dispatched)), dispatched);
+  });
+
   test("binds layer events to their layer and unbinds them with it", async () => {
     const handle = mountMap({
       defs: [SOURCE, { ...CIRCLES, events: { click: { action: "picked", target: "page" } } }],

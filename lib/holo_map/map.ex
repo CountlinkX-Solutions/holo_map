@@ -79,7 +79,9 @@ defmodule HoloMap.Map do
   ## Events
 
   Handlers receive a payload with `center`, `zoom`, `bearing`, `pitch` and
-  `bounds`, plus `lng_lat` and `point` for pointer events:
+  `bounds`, plus `lng_lat` and `point` for pointer events, and `error` for
+  `on_error`: a map with the `message`, plus the `status` and `url` of a failed
+  request and the `source_id` of a source's error when MapLibre reports them.
 
       def action(:map_moved, params, component) do
         put_state(component, :bounds, params.bounds)
