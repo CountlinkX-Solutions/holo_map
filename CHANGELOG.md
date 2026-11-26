@@ -16,6 +16,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is being added, and the listener was attached afterwards. It now fires when
   the popup first renders and when a changed declaration reopens a popup
   MapLibre had closed.
+- Most `HoloMap.Marker` and `HoloMap.Popup` props were read only when the
+  MapLibre object was built, so changing them from state did nothing. A
+  marker's `opacity`, `pitch_alignment`, `rotation_alignment`,
+  `subpixel_positioning`, `popup_html` and `popup_options`, and a popup's
+  `max_width`, `offset`, `class_name` and `subpixel_positioning`, now go through
+  MapLibre's setters. Options MapLibre has no setter for replace the object: a
+  marker's `anchor` and `click_tolerance`, and a popup's `anchor`,
+  `close_button`, `close_on_click`, `close_on_move` and `focus_after_open`. A
+  popup replaced this way reports neither `on_close` nor `on_open`, and a
+  marker's popup that was open stays open when its options change.
 
 ## [0.1.0] - 2026-08-23
 

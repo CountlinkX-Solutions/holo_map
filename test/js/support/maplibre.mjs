@@ -2,8 +2,9 @@
 //
 // Every class records the calls the runtime makes and keeps just the state
 // those calls imply (the sources, the layer stack, controls, markers and
-// popups on the map), so a test can assert both on what was asked and on what
-// a real map would now hold. Nothing here renders, fetches or parses.
+// popups on the map, a marker's popup and alignment, a popup's options and
+// classes), so a test can assert both on what was asked and on what a real
+// map would now hold. Nothing here renders, fetches or parses.
 //
 // MapLibre's events are driven by hand: `map.loadStyle()` plays a style
 // arriving, which wipes the style-scoped state and emits `style.load`, and
@@ -305,6 +306,22 @@ class FakeMap extends Evented {
 
 export { FakeMap as Map };
 
+// MapLibre resolves an unset or "auto" pitch alignment to the rotation
+// alignment, both when it builds a marker and in setPitchAlignment.
+function pitchAlignmentFor(alignment, rotationAlignment) {
+  return alignment && alignment !== "auto" ? alignment : rotationAlignment;
+}
+
+// A class name as DOMTokenList takes it: MapLibre hands names straight to
+// classList, which throws on an empty one or one holding whitespace.
+function classToken(name) {
+  if (name === "" || /\s/.test(name)) {
+    throw new Error(`classList refuses the class name ${JSON.stringify(name)}`);
+  }
+
+  return name;
+}
+
 export class Marker extends Evented {
   constructor(options = {}) {
     super();
@@ -314,6 +331,13 @@ export class Marker extends Evented {
     this.map = null;
     this.popup = null;
     this.calls = [];
+
+    // What the setters below change, starting where MapLibre's constructor
+    // leaves it.
+    this.opacity = options.opacity === undefined ? "1" : String(options.opacity);
+    this.rotationAlignment = options.rotationAlignment || "auto";
+    this.pitchAlignment = pitchAlignmentFor(options.pitchAlignment, this.rotationAlignment);
+    this.subpixelPositioning = options.subpixelPositioning || false;
   }
 
   setLngLat(lngLat) {
@@ -336,17 +360,51 @@ export class Marker extends Evented {
     return this;
   }
 
+  // Takes the marker's popup off the map with it.
   remove() {
     if (this.map) {
       this.map.markers.delete(this);
     }
 
     this.map = null;
+
+    if (this.popup) {
+      this.popup.remove();
+    }
+
     return this;
   }
 
+  // Replacing or clearing the popup closes the one attached before.
   setPopup(popup) {
-    this.popup = popup;
+    if (this.popup) {
+      this.popup.remove();
+      this.popup = null;
+    }
+
+    if (popup) {
+      this.popup = popup;
+    }
+
+    return this;
+  }
+
+  getPopup() {
+    return this.popup;
+  }
+
+  togglePopup() {
+    if (!this.popup) {
+      return this;
+    }
+
+    if (this.popup.isOpen()) {
+      this.popup.remove();
+    } else {
+      this.popup.setLngLat(this.lngLat);
+      this.popup.addTo(this.map);
+    }
+
     return this;
   }
 
@@ -364,15 +422,45 @@ export class Marker extends Evented {
     this.calls.push(["setRotation", rotation]);
     return this;
   }
+
+  // Called with no opacity, MapLibre resets it to its default.
+  setOpacity(opacity) {
+    this.calls.push(["setOpacity", opacity]);
+    this.opacity = opacity === undefined ? "1" : String(opacity);
+    return this;
+  }
+
+  setRotationAlignment(alignment) {
+    this.calls.push(["setRotationAlignment", alignment]);
+    this.rotationAlignment = alignment || "auto";
+    return this;
+  }
+
+  setPitchAlignment(alignment) {
+    this.calls.push(["setPitchAlignment", alignment]);
+    this.pitchAlignment = pitchAlignmentFor(alignment, this.rotationAlignment);
+    return this;
+  }
+
+  setSubpixelPositioning(value) {
+    this.calls.push(["setSubpixelPositioning", value]);
+    this.subpixelPositioning = value;
+    return this;
+  }
 }
 
 export class Popup extends Evented {
   constructor(options = {}) {
     super();
-    this.options = options;
+    // MapLibre copies the options it is given, and its setters write to the
+    // copy.
+    this.options = { ...options };
     this.lngLat = null;
     this.html = null;
     this.map = null;
+    // The classes on the popup's container, which exists only while the
+    // popup is open.
+    this.classes = null;
   }
 
   setLngLat(lngLat) {
@@ -394,6 +482,10 @@ export class Popup extends Evented {
 
     this.map = map;
     map.popups.add(this);
+    // MapLibre splits `className` on single spaces when it builds the
+    // container, so two spaces in a row reach classList as an empty name.
+    const names = this.options.className ? this.options.className.split(" ") : [];
+    this.classes = new Set(names.map(classToken));
     this.fire("open");
     return this;
   }
@@ -407,7 +499,40 @@ export class Popup extends Evented {
     if (this.map) {
       this.map.popups.delete(this);
       this.map = null;
+      this.classes = null;
       this.fire("close");
+    }
+
+    return this;
+  }
+
+  setMaxWidth(maxWidth) {
+    this.options.maxWidth = maxWidth;
+    return this;
+  }
+
+  setOffset(offset) {
+    this.options.offset = offset;
+    return this;
+  }
+
+  // Returns nothing in MapLibre, unlike the other setters.
+  setSubpixelPositioning(value) {
+    this.options.subpixelPositioning = value;
+  }
+
+  // Both work on the container, so they do nothing while the popup is closed.
+  addClassName(name) {
+    if (this.classes) {
+      this.classes.add(classToken(name));
+    }
+
+    return this;
+  }
+
+  removeClassName(name) {
+    if (this.classes) {
+      this.classes.delete(classToken(name));
     }
 
     return this;

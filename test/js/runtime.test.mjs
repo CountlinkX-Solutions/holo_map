@@ -90,6 +90,17 @@ function clickAndDrag(marker) {
   DRAG_EVENTS.forEach((name) => marker.fire(name));
 }
 
+// A popup whose opening and closing are reported.
+const INFO = {
+  kind: "popup",
+  key: "info",
+  spec: { lngLat: [0, 0], html: "<p>One</p>" },
+  events: {
+    open: { action: "shown", target: "page" },
+    close: { action: "closed", target: "page" },
+  },
+};
+
 // The runtime's listeners still attached to a marker: on its element and on
 // the marker as an emitter.
 function markerListeners(marker) {
@@ -374,6 +385,140 @@ describe("update", () => {
     assert.equal(before.map, null);
   });
 
+  test("applies a marker's opacity, alignment and subpixel changes in place", async () => {
+    const handle = mountMap({
+      defs: [{ kind: "marker", key: "pin", spec: { lngLat: [0, 0], opacity: "1" } }],
+    });
+    const [marker] = handle.map.markers;
+
+    handle.setSpec("pin", {
+      lngLat: [0, 0],
+      opacity: "0.4",
+      rotationAlignment: "map",
+      subpixelPositioning: true,
+    });
+    await settle();
+
+    assert.deepEqual([...handle.map.markers], [marker]);
+    assert.equal(marker.opacity, "0.4");
+    assert.equal(marker.rotationAlignment, "map");
+    // An unset pitch alignment follows the rotation alignment, as it does
+    // when MapLibre builds the marker.
+    assert.equal(marker.pitchAlignment, "map");
+    assert.equal(marker.subpixelPositioning, true);
+
+    handle.setSpec("pin", { lngLat: [0, 0], pitchAlignment: "viewport" });
+    await settle();
+
+    assert.deepEqual([...handle.map.markers], [marker]);
+    assert.equal(marker.opacity, "1");
+    assert.equal(marker.rotationAlignment, "auto");
+    assert.equal(marker.pitchAlignment, "viewport");
+    assert.equal(marker.subpixelPositioning, false);
+  });
+
+  test("attaches, updates and detaches a marker's popup as its html changes", async () => {
+    const handle = mountMap({ defs: [{ kind: "marker", key: "pin", spec: { lngLat: [0, 0] } }] });
+    const [marker] = handle.map.markers;
+
+    handle.setSpec("pin", { lngLat: [0, 0], popup: { html: "<p>One</p>", options: {} } });
+    await settle();
+
+    const popup = marker.getPopup();
+    assert.equal(popup.html, "<p>One</p>");
+
+    handle.setSpec("pin", { lngLat: [0, 0], popup: { html: "<p>Two</p>", options: {} } });
+    await settle();
+
+    assert.equal(marker.getPopup(), popup);
+    assert.equal(popup.html, "<p>Two</p>");
+
+    handle.setSpec("pin", { lngLat: [0, 0] });
+    await settle();
+
+    assert.equal(marker.getPopup(), null);
+    assert.deepEqual([...handle.map.markers], [marker]);
+  });
+
+  test("replaces a marker's popup whose options change, keeping it open", async () => {
+    const popup = (options) => ({ html: "<p>Depot</p>", options });
+    const handle = mountMap({
+      defs: [{ kind: "marker", key: "pin", spec: { lngLat: [0, 0], popup: popup({}) } }],
+    });
+    const [marker] = handle.map.markers;
+    const before = marker.getPopup();
+
+    // The user clicks the marker.
+    marker.togglePopup();
+    handle.setSpec("pin", { lngLat: [0, 0], popup: popup({ maxWidth: "320px" }) });
+    await settle();
+
+    const after = marker.getPopup();
+    assert.notEqual(after, before);
+    assert.equal(after.options.maxWidth, "320px");
+    assert.equal(after.html, "<p>Depot</p>");
+    assert.ok(after.isOpen());
+    assert.ok(!before.isOpen());
+    assert.deepEqual([...handle.map.popups], [after]);
+  });
+
+  test("applies a popup's width, offset, class and subpixel changes in place", async () => {
+    const spec = { lngLat: [0, 0], html: "<p>Hi</p>" };
+    const handle = mountMap({
+      defs: [{ ...INFO, spec: { ...spec, maxWidth: "200px", className: "info wide" } }],
+    });
+    const [popup] = handle.map.popups;
+    dispatched.length = 0;
+
+    handle.setSpec("info", {
+      ...spec,
+      maxWidth: "320px",
+      offset: 12,
+      className: "info narrow",
+      subpixelPositioning: true,
+    });
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    assert.equal(popup.options.maxWidth, "320px");
+    assert.equal(popup.options.offset, 12);
+    assert.deepEqual([...popup.classes].sort(), ["info", "narrow"]);
+    assert.equal(popup.options.subpixelPositioning, true);
+
+    handle.setSpec("info", spec);
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    // MapLibre's own default; without a value its container keeps the old one.
+    assert.equal(popup.options.maxWidth, "240px");
+    assert.equal(popup.options.offset, undefined);
+    assert.deepEqual([...popup.classes], []);
+    assert.equal(popup.options.subpixelPositioning, false);
+    assert.deepEqual(dispatched, []);
+  });
+
+  test("replaces an open popup whose close options change, reporting no close or open", async () => {
+    const handle = mountMap({ defs: [INFO] });
+    const [before] = handle.map.popups;
+    dispatched.length = 0;
+
+    handle.setSpec("info", { ...INFO.spec, closeButton: false, closeOnClick: false });
+    await settle();
+
+    const [after] = handle.map.popups;
+    assert.equal(handle.map.popups.size, 1);
+    assert.notEqual(after, before);
+    assert.ok(after.isOpen());
+    assert.deepEqual(after.options, { closeButton: false, closeOnClick: false });
+    assert.equal(after.html, "<p>One</p>");
+    assert.deepEqual(dispatched, []);
+
+    // Its events now come from the new popup, and only from it.
+    after.remove();
+    assert.deepEqual(dispatched, [["closed", "page", {}]]);
+    assert.equal(before.listenerCount("close") + before.listenerCount("open"), 0);
+  });
+
   test("updates an open popup, and reopens one MapLibre closed when it changes", async () => {
     const handle = mountMap({
       defs: [{ kind: "popup", key: "info", spec: { lngLat: [0, 0], html: "<p>One</p>" } }],
@@ -607,10 +752,13 @@ describe("events", () => {
     color: (handle) => handle.setSpec("depot", { ...DEPOT, color: "#2563eb" }),
     scale: (handle) => handle.setSpec("depot", { ...DEPOT, scale: 1.5 }),
     "class name": (handle) => handle.setSpec("depot", { ...DEPOT, className: "depot busy" }),
+    // MapLibre has no setter for these two.
+    anchor: (handle) => handle.setSpec("depot", { ...DEPOT, anchor: "bottom" }),
+    "click tolerance": (handle) => handle.setSpec("depot", { ...DEPOT, clickTolerance: 5 }),
   };
 
   Object.entries(rebuilds).forEach(([change, apply]) => {
-    test(`keeps a marker's events bound when a ${change} change replaces it`, async () => {
+    test(`keeps a marker's events bound when a change to its ${change} replaces it`, async () => {
       const handle = mountMap({
         defs: [
           {
@@ -641,16 +789,6 @@ describe("events", () => {
       assert.equal(markerListeners(before), 0, "listeners left on the discarded marker");
     });
   });
-
-  const INFO = {
-    kind: "popup",
-    key: "info",
-    spec: { lngLat: [0, 0], html: "<p>One</p>" },
-    events: {
-      open: { action: "shown", target: "page" },
-      close: { action: "closed", target: "page" },
-    },
-  };
 
   test("dispatches on_open when a popup first renders and when a change reopens it", async () => {
     const handle = mountMap({ defs: [INFO] });
