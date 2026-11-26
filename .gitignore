@@ -31,3 +31,54 @@ node_modules/
 
 # Dialyzer PLTs, cached by CI rather than committed.
 /priv/plts/
+
+# AI coding harnesses: per-developer tool state, indexes, memories, task
+# trackers and instruction files. None of it is part of the library.
+# Claude Code.
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+# Gentle AI / Agent Teams Lite (skill registry, SDD and ODD artefacts).
+.atl/
+.gentle-ai/
+openspec/
+odd/
+# CodeGraph index and Engram memory.
+.codegraph/
+.engram/
+# Other agents and AI editors.
+AGENTS.md
+AGENTS.override.md
+GEMINI.md
+.agent/
+.agents/
+.codex/
+.opencode/
+opencode.json
+.pi/
+.gemini/
+.cursor/
+.cursorrules
+.cursorignore
+.cursorindexingignore
+.windsurf/
+.windsurfrules
+.github/copilot-instructions.md
+.github/instructions/
+.continue/
+.aider*
+.cline/
+.clinerules
+.roo/
+.roomodes
+.kiro/
+.kilocode/
+.junie/
+.amazonq/
+.augment/
+.trae/
+.impeccable/
+.serena/
+.specify/
+.playwright-mcp/
