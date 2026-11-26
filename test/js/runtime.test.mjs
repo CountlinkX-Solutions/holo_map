@@ -628,6 +628,120 @@ describe("kind change", () => {
     assert.equal(handle.map.popups.size, 1);
     assert.equal([...handle.map.popups][0].html, "<p>Spot</p>");
   });
+
+  test("keeps the new object when a key changes kind before the style has loaded", async () => {
+    const handle = mountMap({
+      defs: [{ kind: "source", key: "spot", spec: { type: "geojson", data: POINTS } }],
+    });
+
+    const element = handle.def("spot");
+    element.setAttribute("data-hm", "marker");
+    element.setAttribute("data-hm-spec", JSON.stringify({ lngLat: [1, 2] }));
+    element.setAttribute(
+      "data-hm-events",
+      JSON.stringify({ click: { action: "spotted", target: "page" } }),
+    );
+    await settle();
+    handle.map.loadStyle();
+
+    const [marker] = handle.map.markers;
+    assert.equal(handle.map.markers.size, 1);
+    assert.equal(handle.map.getSource("spot"), undefined);
+
+    await userClick(marker.getElement());
+    assert.deepEqual(dispatched, [["spotted", "page", { lng_lat: [1, 2] }]]);
+
+    handle.remove("spot");
+    await settle();
+
+    assert.equal(handle.map.markers.size, 0);
+  });
+});
+
+// MapLibre keeps sources, layers and images apart, so one id can name one of
+// each, and terrain and sky are not named at all.
+describe("shared ids", () => {
+  const PARCELS = {
+    kind: "source",
+    key: "parcels",
+    spec: { type: "geojson", data: POINTS },
+  };
+
+  const PARCELS_FILL = {
+    kind: "layer",
+    key: "parcels",
+    spec: { type: "fill", source: "parcels", paint: { "fill-color": "#3b82f6" } },
+  };
+
+  const REBUILDS = ["addSource", "removeSource", "addLayer", "removeLayer"];
+
+  test("keeps a source and a layer that share an id, across re-renders", async () => {
+    const handle = mountMap({ defs: [PARCELS, PARCELS_FILL] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getSource("parcels").spec, PARCELS.spec);
+    assert.deepEqual(handle.map.layerIds(), ["parcels"]);
+
+    handle.map.calls.length = 0;
+    const red = { ...PARCELS_FILL.spec, paint: { "fill-color": "#ef4444" } };
+    handle.setSpec("parcels", red, "layer");
+    handle.setSpec("parcels", { type: "geojson", data: MORE_POINTS }, "source");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, REBUILDS), []);
+    assert.deepEqual(handle.map.callsTo("setPaintProperty"), [
+      ["parcels", "fill-color", "#ef4444"],
+    ]);
+    assert.deepEqual(handle.map.callsTo("setData"), [["parcels", MORE_POINTS]]);
+    assert.deepEqual(handle.map.layerIds(), ["parcels"]);
+  });
+
+  test("keeps an image, a source and a layer that share an id", async () => {
+    const handle = mountMap({
+      defs: [
+        { kind: "image", key: "stops", spec: { url: "https://tiles.test/stop.png" } },
+        { kind: "source", key: "stops", spec: { type: "geojson", data: POINTS } },
+        {
+          kind: "layer",
+          key: "stops",
+          spec: { type: "symbol", source: "stops", layout: { "icon-image": "stops" } },
+        },
+      ],
+    });
+    handle.map.loadStyle();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("stops").image, { url: "https://tiles.test/stop.png" });
+    assert.ok(handle.map.getSource("stops"));
+    assert.deepEqual(handle.map.layerIds(), ["stops"]);
+  });
+
+  test("keeps layers called terrain and sky next to the Terrain and Sky components", async () => {
+    const terrain = { source: "dem", exaggeration: 1.4 };
+    const sky = { "sky-color": "#199EF3" };
+    const handle = mountMap({
+      defs: [
+        { kind: "source", key: "dem", spec: { type: "raster-dem", tiles: ["https://dem.test"] } },
+        { kind: "layer", key: "terrain", spec: { type: "hillshade", source: "dem" } },
+        { kind: "terrain", key: "terrain", spec: terrain },
+        { kind: "layer", key: "sky", spec: { type: "background" } },
+        { kind: "sky", key: "sky", spec: sky },
+      ],
+    });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[terrain]]);
+    assert.deepEqual(handle.map.callsTo("setSky"), [[sky]]);
+    assert.deepEqual(handle.map.layerIds(), ["terrain", "sky"]);
+
+    handle.map.calls.length = 0;
+    handle.setSpec("terrain", { ...terrain, exaggeration: 2 }, "terrain");
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[{ ...terrain, exaggeration: 2 }]]);
+    assert.deepEqual(sequence(handle.map, REBUILDS), []);
+    assert.deepEqual(handle.map.layerIds(), ["terrain", "sky"]);
+  });
 });
 
 describe("style reload", () => {

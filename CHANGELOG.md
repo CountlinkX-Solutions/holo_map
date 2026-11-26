@@ -42,6 +42,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dispatched once the click has finished propagating, after the `on_close` of
   any popup it closed, so a popup whose `on_close` clears the selection no
   longer undoes the selection made by clicking another marker.
+- A source, a layer and a `HoloMap.Image` that shared an `id`, as a source and
+  the layer drawing it often do, replaced one another on every render, leaving
+  the map without the source or the layer. The same happened to a layer called
+  `terrain` or `sky` next to `HoloMap.Terrain` or `HoloMap.Sky`. Definitions are
+  now told apart by kind as well as `id`, and MapLibre still receives the `id`
+  unchanged. This also fixes a definition that changed from a source or layer
+  to a marker, popup or control before the style had loaded: its new object
+  lost its events, and removing the definition left it on the map.
 
 ## [0.1.0] - 2026-08-23
 

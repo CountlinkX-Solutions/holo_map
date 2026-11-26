@@ -1,8 +1,8 @@
 // Stands in for maplibre-gl in the runtime unit tests.
 //
 // Every class records the calls the runtime makes and keeps just the state
-// those calls imply (the sources, the layer stack, controls, markers and
-// popups on the map, a marker's popup and alignment, a popup's options and
+// those calls imply (the sources, the layer stack, images, controls, markers
+// and popups on the map, a marker's popup and alignment, a popup's options and
 // classes), so a test can assert both on what was asked and on what a real
 // map would now hold. Nothing here renders, fetches or parses.
 //
@@ -64,6 +64,9 @@ class FakeMap extends Evented {
     this.calls = [];
     this.sources = new Map();
     this.layers = [];
+    // Registered images by name. A style arriving leaves them alone: no test
+    // swaps styles with images registered.
+    this.images = new Map();
     this.controls = [];
     this.markers = new Set();
     this.popups = new Set();
@@ -262,6 +265,42 @@ class FakeMap extends Evented {
 
   setTerrain(terrain) {
     this.record("setTerrain", terrain);
+  }
+
+  // --- images --------------------------------------------------------------
+
+  // Resolves the way MapLibre's image request does, with the image under
+  // `data`. Nothing is fetched: the image stands in as its URL.
+  loadImage(url) {
+    this.record("loadImage", url);
+    return Promise.resolve({ data: { url } });
+  }
+
+  hasImage(id) {
+    return this.images.has(id);
+  }
+
+  // Both report a name that is taken, or missing, as an error event.
+  addImage(id, image, options = {}) {
+    this.record("addImage", id, image, options);
+
+    if (this.images.has(id)) {
+      this.reportError(new Error(`An image named "${id}" already exists.`));
+      return;
+    }
+
+    this.images.set(id, { image, options });
+  }
+
+  removeImage(id) {
+    this.record("removeImage", id);
+
+    if (!this.images.has(id)) {
+      this.reportError(new Error(`An image named "${id}" does not exist.`));
+      return;
+    }
+
+    this.images.delete(id);
   }
 
   setSky(sky) {
