@@ -10,7 +10,7 @@
 // with a dynamic import rather than a static one.
 
 import * as nodeModule from "node:module";
-import { installDOM, nextTask, settle } from "./dom.mjs";
+import { discardFrames, installDOM, nextFrame, nextTask, pendingFrames, settle } from "./dom.mjs";
 
 if (typeof nodeModule.registerHooks !== "function") {
   throw new Error(
@@ -35,7 +35,7 @@ const document = installDOM();
 
 export const runtime = await import("../../../lib/holo_map/js/runtime.mjs");
 export const maplibre = await import("maplibre-gl");
-export { nextTask, settle };
+export { nextFrame, nextTask, pendingFrames, settle };
 
 // Actions the runtime dispatched, as [action, target, params], newest last.
 export const dispatched = [];
@@ -121,9 +121,10 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [], boot = true }
 }
 
 // Tears down every map a test mounted, so the next test starts from an empty
-// document and an empty registry.
+// document and an empty registry, and with no frame still to run.
 export function unmountAll() {
   live.splice(0).forEach((handle) => handle.unmount());
+  discardFrames();
 }
 
 // One definition element, with an optional slot (`content`) the way Marker

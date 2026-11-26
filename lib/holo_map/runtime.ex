@@ -33,6 +33,10 @@ defmodule HoloMap.Runtime do
   instead of building a second one, and calling it after a client-side
   navigation, where the same cid is rendered onto a fresh DOM node, disposes
   the stale instance first.
+
+  The map is built once its container and its own map definition are in the
+  page, which it waits for a frame at a time. If they have not appeared after
+  about a second (60 frames), it gives up with a console warning.
   """
   @spec boot(String.t()) :: :ok
   def boot(cid) do

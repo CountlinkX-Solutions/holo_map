@@ -16,7 +16,9 @@ import {
   logged,
   maplibre,
   mountMap,
+  nextFrame,
   nextTask,
+  pendingFrames,
   runtime,
   settle,
   unmountAll,
@@ -148,6 +150,61 @@ describe("boot", () => {
     const { cid, map } = mountMap();
 
     assert.equal(runtime.instance(cid), map);
+  });
+
+  // Boot waits for what it needs a frame at a time, but not forever.
+  function runFrames(count) {
+    for (let frame = 0; frame < count; frame += 1) {
+      nextFrame();
+    }
+  }
+
+  test("stops waiting for a container that never appears, with one warning", () => {
+    const maps = maplibre.maps.length;
+
+    runtime.boot("absent");
+    runFrames(30);
+
+    assert.deepEqual(logged.warnings, []);
+    assert.equal(pendingFrames(), 1);
+
+    runFrames(100);
+
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /"absent"/);
+    assert.match(logged.warnings[0], /#hm--absent/);
+    assert.equal(pendingFrames(), 0);
+    assert.equal(maplibre.maps.length, maps);
+  });
+
+  test("builds the map only once its definition names it, with its options", () => {
+    const handle = mountMap({ boot: false });
+    const element = handle.def("map", "map");
+
+    // Mid-morph, the definition still belongs to the outgoing page's map.
+    element.setAttribute("data-hm-map", "outgoing");
+    handle.boot();
+    runFrames(3);
+
+    assert.equal(handle.map, undefined);
+
+    element.setAttribute("data-hm-map", handle.cid);
+    nextFrame();
+
+    assert.deepEqual(handle.map.options, { style: STYLE, container: handle.container });
+  });
+
+  test("stops waiting for a definition that never names the map, with one warning", () => {
+    const handle = mountMap({ boot: false });
+    handle.def("map", "map").setAttribute("data-hm-map", "outgoing");
+
+    handle.boot();
+    runFrames(100);
+
+    assert.equal(handle.map, undefined);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /map definition/);
+    assert.equal(pendingFrames(), 0);
   });
 });
 

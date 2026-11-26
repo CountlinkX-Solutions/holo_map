@@ -103,6 +103,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   image removed while it loaded registered it again, with no component left to
   remove it. A load is now applied only if it is the latest one for an image
   that is still declared.
+- Booting a map retried every animation frame for as long as its container was
+  missing, for the rest of the page's life if the page moved on first, and
+  built the map with no options, so with no style ever, when the map definition
+  still named another map during a navigation. Boot now waits a frame at a
+  time for both the container and a definition that names the map, and gives
+  up with a warning after 60 frames.
 
 ## [0.1.0] - 2026-08-23
 
