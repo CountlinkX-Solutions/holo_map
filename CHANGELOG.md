@@ -134,6 +134,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   showing a selected feature. A popup whose `on_close` clears the selection
   therefore undid the selection made by clicking another feature. A layer's
   `on_click` is now dispatched once the click has finished, as a marker's is.
+- Changing a `HoloMap.Image`'s `url` to an image of another size left the old
+  image in place and logged an error, because MapLibre's `updateImage` accepts
+  only an image of the same size. Such an image is now registered again, with
+  the same options; one of the same size is still updated in place.
 
 ## [0.1.0] - 2026-08-23
 

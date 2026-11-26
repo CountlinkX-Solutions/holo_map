@@ -1028,7 +1028,38 @@ describe("image loads", () => {
     b.finish();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("c") });
+    assert.equal(handle.map.images.get("pin").image.url, icon("c"));
+  });
+
+  // MapLibre's updateImage refuses an image whose size differs from the one
+  // registered, and leaves that one in place.
+  test("updates an image whose new URL has the same size, and replaces one of another", async () => {
+    const options = { pixelRatio: 2 };
+    const handle = mountMap({
+      defs: [{ kind: "image", key: "pin", spec: { url: icon("a"), ...options } }],
+    });
+    handle.map.imageSizes[icon("wide")] = { width: 64, height: 32 };
+    handle.map.loadStyle();
+    await settle();
+
+    const changes = ["addImage", "updateImage", "removeImage"];
+    handle.map.calls.length = 0;
+    handle.setSpec("pin", { url: icon("b"), ...options }, "image");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, changes), [["updateImage", "pin"]]);
+    assert.equal(handle.map.images.get("pin").image.url, icon("b"));
+
+    handle.map.calls.length = 0;
+    handle.setSpec("pin", { url: icon("wide"), ...options }, "image");
+    await settle();
+
+    assert.equal(handle.map.images.get("pin").image.url, icon("wide"));
+    assert.deepEqual(handle.map.images.get("pin").options, options);
+    assert.deepEqual(sequence(handle.map, changes), [
+      ["removeImage", "pin"],
+      ["addImage", "pin"],
+    ]);
   });
 
   test("does not register an image whose definition was removed while it loaded", async () => {
@@ -1047,7 +1078,7 @@ describe("image loads", () => {
     handle.map.heldImages[1].finish();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("b") });
+    assert.equal(handle.map.images.get("pin").image.url, icon("b"));
   });
 });
 
@@ -1329,7 +1360,7 @@ describe("shared ids", () => {
     handle.map.loadStyle();
     await settle();
 
-    assert.deepEqual(handle.map.images.get("stops").image, { url: "https://tiles.test/stop.png" });
+    assert.equal(handle.map.images.get("stops").image.url, "https://tiles.test/stop.png");
     assert.ok(handle.map.getSource("stops"));
     assert.deepEqual(handle.map.layerIds(), ["stops"]);
   });
