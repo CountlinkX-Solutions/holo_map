@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `HoloMap.Marker`'s `on_click`, `on_drag_start`, `on_drag` and `on_drag_end`
+  stopped firing once a change to the slot content, `color`, `scale` or
+  `class_name` replaced the MapLibre marker. The listeners are now bound to the
+  new marker and taken off the old one.
+
 ## [0.1.0] - 2026-08-23
 
 ### Added
@@ -74,4 +83,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Elixir 1.19+, OTP 28.1+, Hologram 0.11+
 - MapLibre GL JS 6.x, installed and served by the host application
 
+[Unreleased]: https://github.com/CountlinkX-Solutions/holo_map/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/CountlinkX-Solutions/holo_map/releases/tag/v0.1.0

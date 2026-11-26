@@ -74,6 +74,31 @@ function sequence(map, names) {
     .map(([name, target]) => [name, typeof target === "string" ? target : target.id]);
 }
 
+const DRAG_EVENTS = ["dragstart", "drag", "dragend"];
+
+const MARKER_EVENTS = {
+  click: { action: "picked", target: "page" },
+  dragstart: { action: "drag_started", target: "page" },
+  drag: { action: "dragged", target: "page" },
+  dragend: { action: "dropped", target: "page" },
+};
+
+// Clicks a marker and plays a drag on it, each the way MapLibre reports it: a
+// DOM click on the marker's element, drag events on the marker itself.
+function clickAndDrag(marker) {
+  marker.getElement().dispatchEvent({ type: "click" });
+  DRAG_EVENTS.forEach((name) => marker.fire(name));
+}
+
+// The runtime's listeners still attached to a marker: on its element and on
+// the marker as an emitter.
+function markerListeners(marker) {
+  const element = marker.getElement().listeners.filter(({ name }) => name === "click").length;
+  const emitter = DRAG_EVENTS.reduce((count, name) => count + marker.listenerCount(name), 0);
+
+  return element + emitter;
+}
+
 afterEach(() => {
   unmountAll();
   dispatched.length = 0;
@@ -569,6 +594,52 @@ describe("events", () => {
     await settle();
 
     assert.equal(handle.map.listenerCount("click", "cities-circles"), 0);
+  });
+
+  // Each of these makes the runtime replace the MapLibre marker, and the new
+  // one comes with a new element and a new emitter to bind the events to.
+  const DEPOT = { lngLat: [-69.9, 18.5], color: "#e11d48", scale: 1, className: "depot" };
+
+  const rebuilds = {
+    "slot content": (handle) => {
+      handle.def("depot").querySelector("[data-hm-content]").innerHTML = "<b>3 pending</b>";
+    },
+    color: (handle) => handle.setSpec("depot", { ...DEPOT, color: "#2563eb" }),
+    scale: (handle) => handle.setSpec("depot", { ...DEPOT, scale: 1.5 }),
+    "class name": (handle) => handle.setSpec("depot", { ...DEPOT, className: "depot busy" }),
+  };
+
+  Object.entries(rebuilds).forEach(([change, apply]) => {
+    test(`keeps a marker's events bound when a ${change} change replaces it`, async () => {
+      const handle = mountMap({
+        defs: [
+          {
+            kind: "marker",
+            key: "depot",
+            spec: DEPOT,
+            events: MARKER_EVENTS,
+            content: "<b>2 pending</b>",
+          },
+        ],
+      });
+      const [before] = handle.map.markers;
+
+      apply(handle);
+      await settle();
+
+      const [after] = handle.map.markers;
+      assert.equal(handle.map.markers.size, 1);
+      assert.notEqual(after, before);
+
+      clickAndDrag(after);
+
+      assert.deepEqual(
+        dispatched.map(([action]) => action),
+        ["picked", "drag_started", "dragged", "dropped"],
+      );
+      assert.deepEqual(dispatched[0][2], { lng_lat: [-69.9, 18.5] });
+      assert.equal(markerListeners(before), 0, "listeners left on the discarded marker");
+    });
   });
 });
 
