@@ -50,6 +50,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged. This also fixes a definition that changed from a source or layer
   to a marker, popup or control before the style had loaded: its new object
   lost its events, and removing the definition left it on the map.
+- A layer whose source did not exist yet was handed to MapLibre anyway, which
+  refused it with a "source not found" error, and nothing added it later: a
+  layer written above its source, a layer rendered while its source was not,
+  and the layers of a source that was removed and rendered again all stayed
+  missing. Such a layer now waits for its source and is added, in declared
+  order, as soon as the source is.
 
 ## [0.1.0] - 2026-08-23
 

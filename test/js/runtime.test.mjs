@@ -614,6 +614,46 @@ describe("remove", () => {
   });
 });
 
+// MapLibre refuses a layer whose source it does not hold. The runtime holds
+// the layer back instead, and adds it when the source appears.
+describe("layers waiting for their source", () => {
+  test("adds a layer written above its source once the source is added", () => {
+    const { map } = mountMap({ defs: [CIRCLES, SOURCE, LABELS] });
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("adds layers rendered without their source once the source is rendered", async () => {
+    const handle = mountMap({ defs: [CIRCLES, LABELS] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+
+    handle.add(SOURCE);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("restores a source's layers in declared order when it is rendered again", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.remove("cities");
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+    assert.equal(handle.map.getSource("cities"), undefined);
+
+    handle.add(SOURCE);
+    await settle();
+
+    assert.ok(handle.map.getSource("cities"));
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+});
+
 describe("kind change", () => {
   test("replaces the object when a key is reused for a different kind", async () => {
     const handle = mountMap({ defs: [{ kind: "marker", key: "spot", spec: { lngLat: [0, 0] } }] });
