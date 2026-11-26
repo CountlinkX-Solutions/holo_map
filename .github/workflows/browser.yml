@@ -30,14 +30,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -46,7 +46,7 @@ jobs:
       - name: Install the filesystem watcher mix holo needs
         run: sudo apt-get update && sudo apt-get install -y inotify-tools
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             demo/deps
@@ -56,6 +56,21 @@ jobs:
 
       - name: Build the demo
         run: mix setup
+        working-directory: demo
+
+      # When the endpoint starts, Phoenix's code reloader turns the build
+      # directory's priv into a link to demo/priv, so demo/priv/static/hologram
+      # is where the server will look for the bundles, whatever the build did.
+      # Without them the server still answers, and the suites would only time
+      # out waiting for a map that never boots.
+      - name: Check that the Hologram bundles are where the server serves them
+        run: |
+          if ! compgen -G "priv/static/hologram/runtime-*.js" > /dev/null ||
+             ! compgen -G "priv/static/hologram/page-*.js" > /dev/null; then
+            echo "::error::No Hologram bundle in demo/priv/static/hologram, the directory the server will serve them from. Every page would load without its JavaScript."
+            ls -la _build/dev/lib/demo priv/static || true
+            exit 1
+          fi
         working-directory: demo
 
       - name: Start it

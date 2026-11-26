@@ -67,9 +67,30 @@ defmodule Demo.MixProject do
   # In dev and test the Hologram compiler is a no-op unless HOLOGRAM_START is
   # set — `mix holo` sets it, but by then it is too late for any task that needs
   # the bundles on disk.
+  #
+  # The bundles go to priv/static/hologram inside this app's build directory,
+  # which Mix links to the project's own priv/ only if priv/ already exists
+  # when it first compiles. Everything the build writes under priv/ is
+  # git-ignored, so priv/static/.gitkeep is committed to make that true on a
+  # fresh checkout. Without it the bundles land in a plain directory, and
+  # Phoenix's code reloader deletes that directory when the endpoint starts,
+  # replacing it with a link to a priv/ that holds no bundles: every page then
+  # asks for bundles that answer 404.
   defp build_bundles(_args) do
+    remove_plain_build_priv()
     System.put_env("HOLOGRAM_START", "1")
     Mix.Task.rerun("compile")
+  end
+
+  # A checkout compiled before priv/ existed keeps that plain directory, and
+  # Mix never swaps an existing directory for the link. Removing it lets the
+  # compile that follows create the link.
+  defp remove_plain_build_priv do
+    build_priv = Path.join(Mix.Project.app_path(), "priv")
+
+    if File.dir?(build_priv) and match?({:error, _}, File.read_link(build_priv)) do
+      File.rm_rf!(build_priv)
+    end
   end
 
   defp install_npm_deps(_args) do

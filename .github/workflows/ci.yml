@@ -19,14 +19,14 @@ jobs:
     name: Library
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             deps
@@ -54,14 +54,14 @@ jobs:
     name: Dialyzer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             deps
@@ -71,7 +71,7 @@ jobs:
 
       # Building the PLT from scratch costs more than every other check
       # combined, and it only changes when the toolchain or the deps do.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: priv/plts
           key: plt-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
@@ -84,17 +84,27 @@ jobs:
   demo:
     name: Demo
     runs-on: ubuntu-latest
-    # The demo depends on the library by path, so this is where a change that
-    # breaks a component's template or props surfaces.
+    # The demo depends on the library by path and compiles it with the Hologram
+    # compiler, which transpiles every component to JavaScript and bundles it
+    # with the runtime. This is where a change that breaks a component's
+    # template or props, or that calls Elixir Hologram cannot run in the
+    # browser, surfaces. Nothing here loads a page: the runtime's behaviour in
+    # a browser is the Browser suites workflow's job.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      # The Hologram compiler npm-installs its own assets and bundles with
+      # esbuild, and the demo's maplibre-gl comes from npm too.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - uses: actions/cache@v6
         with:
           path: |
             demo/deps
@@ -105,7 +115,36 @@ jobs:
       - run: mix deps.get
         working-directory: demo
 
-      - run: mix compile --warnings-as-errors
+      # Hologram puts assets/node_modules on esbuild's NODE_PATH but never
+      # installs it, and the bundle fails to resolve maplibre-gl without it.
+      - run: mix assets.install
+        working-directory: demo
+
+      # In dev and test the Hologram compiler is a no-op unless HOLOGRAM_START
+      # is set, so a plain compile would never transpile a component.
+      - name: Compile, Hologram compiler included
+        run: |
+          touch "$RUNNER_TEMP/compile-started"
+          mix compile --warnings-as-errors
+        env:
+          HOLOGRAM_START: "1"
+        working-directory: demo
+
+      # Bundles land where the endpoint serves them from, and every Hologram
+      # compile rewrites them, so a bundle older than the compile step is a
+      # leftover restored from the cache, not proof that this run built it.
+      - name: The Hologram compiler wrote page bundles
+        run: |
+          dir=_build/dev/lib/demo/priv/static/hologram
+          written=0
+          if [ -d "$dir" ]; then
+            written=$(find "$dir" -name 'page-*.js' -newer "$RUNNER_TEMP/compile-started" | wc -l)
+          fi
+          echo "page bundles written: $written"
+          if [ "$written" -eq 0 ]; then
+            echo "::error::The Hologram compiler wrote no page bundle to demo/$dir"
+            exit 1
+          fi
         working-directory: demo
 
       - run: mix format --check-formatted
