@@ -7,10 +7,13 @@
 // map would now hold. Nothing here renders, fetches or parses.
 //
 // MapLibre's events are driven by hand: `map.loadStyle()` plays a style
-// arriving, which wipes the style-scoped state and emits `style.load`, and
+// arriving, which replaces the style-scoped state and emits `style.load`, and
 // `fire()` emits any other event. Clicks can also go through the DOM: one
 // dispatched on a marker's element bubbles to the map's canvas container,
 // which turns it into the map's `click` as MapLibre does.
+//
+// As in MapLibre, the style methods throw "Style is not done loading." until
+// a style has loaded, and again while setStyle rebuilds the style.
 
 // Every Map constructed, oldest first.
 export const maps = [];
@@ -64,9 +67,13 @@ class FakeMap extends Evented {
     this.calls = [];
     this.sources = new Map();
     this.layers = [];
-    // Registered images by name. A style arriving leaves them alone: no test
-    // swaps styles with images registered.
+    // Registered images by name. MapLibre keeps them on the style object, so
+    // a style that setStyle rebuilds starts without them.
     this.images = new Map();
+    this.terrain = null;
+    // The style given to the constructor is still on its way.
+    this.styleLoaded = false;
+    this.styleRequest = { diff: false };
     this.controls = [];
     this.markers = new Set();
     this.popups = new Set();
@@ -134,14 +141,64 @@ class FakeMap extends Evented {
     return this.calls.filter(([called]) => called === name).map(([, ...args]) => args);
   }
 
-  // Plays a style arriving: whatever the previous style held is gone, the
-  // new style's own sources and layers are in place, and `style.load` fires.
-  loadStyle({ sources = {}, layers = [] } = {}) {
+  // Plays a style arriving: the map's first style, or the response to the
+  // setStyle call before it. A style that setStyle diffs is applied as diff()
+  // describes. Any other replaces whatever the previous style held with its
+  // own sources and layers, and no terrain, and `style.load` fires.
+  loadStyle(style = {}) {
+    const request = this.styleRequest;
+    this.styleRequest = null;
+
+    if (request && request.diff) {
+      this.diff(style);
+      return;
+    }
+
+    const { sources = {}, layers = [] } = style;
+
     this.sources = new Map(
       Object.entries(sources).map(([id, spec]) => [id, this.sourceObject(id, spec)]),
     );
     this.layers = layers.map((layer) => ({ ...layer }));
+    this.terrain = null;
+    this.styleLoaded = true;
     this.fire("style.load");
+  }
+
+  // MapLibre's diff: the current style, with the sources and layers added to
+  // it since it loaded, is compared with `style`. What `style` lacks goes,
+  // what it adds comes, a source it leaves unchanged stays the same object,
+  // and `style.load` fires, but only if anything changed. A change MapLibre
+  // cannot diff (a new sprite or glyphs) makes it rebuild instead; no test
+  // depends on that, so it is not modelled.
+  diff({ sources = {}, layers = [] } = {}) {
+    const current = Object.fromEntries(
+      Array.from(this.sources, ([id, source]) => [id, source.spec]),
+    );
+
+    if (
+      JSON.stringify(current) === JSON.stringify(sources) &&
+      JSON.stringify(this.layers) === JSON.stringify(layers)
+    ) {
+      return;
+    }
+
+    this.sources = new Map(
+      Object.entries(sources).map(([id, spec]) => {
+        const kept = this.sources.get(id);
+        const same = kept && JSON.stringify(kept.spec) === JSON.stringify(spec);
+        return [id, same ? kept : this.sourceObject(id, spec)];
+      }),
+    );
+    this.layers = layers.map((layer) => ({ ...layer }));
+    this.fire("style.load");
+  }
+
+  // What MapLibre's style methods check first.
+  checkLoaded() {
+    if (!this.styleLoaded) {
+      throw new Error("Style is not done loading.");
+    }
   }
 
   layerIds() {
@@ -159,12 +216,35 @@ class FakeMap extends Evented {
 
   // --- style ---------------------------------------------------------------
 
+  // MapLibre diffs the new style against the current one, unless the options
+  // say `diff: false` or no style has loaded yet. Otherwise it builds a new
+  // style object, which holds no source, layer or image and takes no work
+  // until it has loaded; the terrain stays until then. A style given by URL
+  // is fetched first either way, and loadStyle() plays the response
+  // arriving. An object to diff is diffed at once.
   setStyle(style, options) {
     this.record("setStyle", style, options);
+
+    if ((!options || options.diff !== false) && this.styleLoaded) {
+      if (typeof style === "string") {
+        this.styleRequest = { diff: true };
+      } else {
+        this.diff(style);
+      }
+
+      return;
+    }
+
+    this.styleLoaded = false;
+    this.styleRequest = { diff: false };
+    this.sources = new Map();
+    this.layers = [];
+    this.images = new Map();
   }
 
   addSource(id, spec) {
     this.record("addSource", id, spec);
+    this.checkLoaded();
 
     if (this.sources.has(id)) {
       throw new Error(`There is already a source with ID "${id}".`);
@@ -179,6 +259,7 @@ class FakeMap extends Evented {
 
   removeSource(id) {
     this.record("removeSource", id);
+    this.checkLoaded();
     const user = this.layers.find((layer) => layer.source === id);
 
     if (user) {
@@ -192,6 +273,7 @@ class FakeMap extends Evented {
   // that fails is reported as an error and left off the map, not thrown.
   addLayer(layer, before) {
     this.record("addLayer", layer, before);
+    this.checkLoaded();
 
     if (this.getLayer(layer.id)) {
       throw new Error(`Layer "${layer.id}" already exists on this map.`);
@@ -255,6 +337,7 @@ class FakeMap extends Evented {
 
   removeLayer(id) {
     this.record("removeLayer", id);
+    this.checkLoaded();
     this.layers = this.layers.filter((layer) => layer.id !== id);
   }
 
@@ -268,6 +351,7 @@ class FakeMap extends Evented {
   // the stack, which here means off the map.
   moveLayer(id, before) {
     this.record("moveLayer", id, before);
+    this.checkLoaded();
     const layer = this.getLayer(id);
 
     if (!layer) {
@@ -296,25 +380,30 @@ class FakeMap extends Evented {
 
   setPaintProperty(id, name, value) {
     this.record("setPaintProperty", id, name, value);
+    this.checkLoaded();
     this.getLayer(id).paint[name] = value;
   }
 
   setLayoutProperty(id, name, value) {
     this.record("setLayoutProperty", id, name, value);
+    this.checkLoaded();
     this.getLayer(id).layout[name] = value;
   }
 
   setFilter(id, filter) {
     this.record("setFilter", id, filter);
+    this.checkLoaded();
     this.getLayer(id).filter = filter;
   }
 
   setLayerZoomRange(id, minzoom, maxzoom) {
     this.record("setLayerZoomRange", id, minzoom, maxzoom);
+    this.checkLoaded();
   }
 
   setTerrain(terrain) {
     this.record("setTerrain", terrain);
+    this.checkLoaded();
   }
 
   // --- images --------------------------------------------------------------
@@ -355,6 +444,7 @@ class FakeMap extends Evented {
 
   setSky(sky) {
     this.record("setSky", sky);
+    this.checkLoaded();
   }
 
   // --- overlays ------------------------------------------------------------

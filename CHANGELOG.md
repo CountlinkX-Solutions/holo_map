@@ -66,6 +66,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names is on the map. A control rendered conditionally, or replaced by a prop
   change, went to the far end of its corner; it now goes back to its declared
   place, and the controls around it are left as they are.
+- An inline `style` map was set again on every change to any `HoloMap.Map`
+  prop, such as `zoom`, and MapLibre's diff then took every source and layer
+  off the map and back on. It is now compared by value. A style change, from
+  the prop or `HoloMap.API.set_style/2`, now always builds the new style from
+  scratch instead of diffing it, so it always ends in the re-declaration of the
+  map's sources, layers, images, terrain and sky; work and `HoloMap.API` calls
+  issued while the new style loads wait for it instead of reaching the old
+  style or failing with "Style is not done loading". When the new style
+  already defines a source of the same `id`, the layers drawing from it are no
+  longer added to the style's source, where a vector source refused each one
+  with an error; the warning now names them. A style change also no longer
+  warns that the new style defines each of the map's own layers.
 
 ## [0.1.0] - 2026-08-23
 

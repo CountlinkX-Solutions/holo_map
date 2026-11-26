@@ -1007,6 +1007,126 @@ describe("style reload", () => {
     assert.equal(logged.warnings.length, 1);
     assert.match(logged.warnings[0], /the new style already defines a source called "cities"/);
   });
+
+  const DARK = "https://tiles.test/dark.json";
+
+  test("leaves an unchanged inline style alone when another map prop changes", async () => {
+    const inline = { version: 8, sources: {}, layers: [{ id: "background", type: "background" }] };
+    const handle = mountMap({ spec: { style: inline, zoom: 3 }, defs: [SOURCE, CIRCLES, LABELS] });
+    handle.map.loadStyle(inline);
+    handle.map.calls.length = 0;
+
+    handle.setSpec("map", { style: inline, zoom: 5 });
+    await settle();
+
+    // Set again, MapLibre would diff it against the map and take off every
+    // source and layer the style itself does not carry.
+    assert.deepEqual(handle.map.callsTo("setStyle"), []);
+    assert.deepEqual(sequence(handle.map, ["addSource", "addLayer"]), []);
+    assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 5 }, { holoMapReconciled: true }]]);
+    assert.deepEqual(handle.map.layerIds(), ["background", "cities-circles", "cities-labels"]);
+
+    const changed = { ...inline, layers: [{ id: "land", type: "background" }] };
+    handle.setSpec("map", { style: changed, zoom: 5 });
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("setStyle"), [[changed, { diff: false }]]);
+  });
+
+  test("declares terrain and sky again with the rest, warning about nothing it owns", async () => {
+    const terrain = { source: "dem", exaggeration: 1.4 };
+    const sky = { "sky-color": "#199EF3" };
+    const handle = mountMap({
+      defs: [
+        SOURCE,
+        CIRCLES,
+        LABELS,
+        { kind: "source", key: "dem", spec: { type: "raster-dem", tiles: ["https://dem.test"] } },
+        { kind: "terrain", key: "terrain", spec: terrain },
+        { kind: "sky", key: "sky", spec: sky },
+      ],
+    });
+    handle.map.loadStyle();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.calls.length = 0;
+    handle.map.loadStyle({ layers: [{ id: "background", type: "background" }] });
+
+    assert.deepEqual(handle.map.layerIds(), ["background", "cities-circles", "cities-labels"]);
+    assert.ok(handle.map.getSource("cities"));
+    assert.ok(handle.map.getSource("dem"));
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[terrain]]);
+    assert.deepEqual(handle.map.callsTo("setSky"), [[sky]]);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  test("holds definitions and HoloMap.API calls that come while a new style loads", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.add({ kind: "layer", key: "cities-halo", spec: { type: "circle", source: "cities" } });
+    await settle();
+    runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels", "cities-halo"]);
+    assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("swaps the style for HoloMap.API.set_style/2 the same way", () => {
+    const handle = loadedCitiesMap();
+
+    runtime.invoke(handle.cid, "setStyle", [DARK]);
+    runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+    handle.map.loadStyle();
+
+    // Never a diff, so `style.load` always follows and nothing is lost.
+    assert.deepEqual(handle.map.callsTo("setStyle"), [[DARK, { diff: false }]]);
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+    assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("runs the calls queued after a set_style/2 on the style it asked for", () => {
+    const { cid, map } = mountMap({ defs: [SOURCE, CIRCLES, LABELS] });
+
+    runtime.invoke(cid, "setStyle", [DARK]);
+    runtime.invoke(cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+    map.loadStyle();
+
+    assert.deepEqual(map.callsTo("setPaintProperty"), []);
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-circles", "cities-labels"]);
+    assert.equal(map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("leaves the layers of a source the new style took over off the map, naming them", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.calls.length = 0;
+    // A basemap's vector source refuses a layer with no "source-layer".
+    handle.map.loadStyle({
+      sources: { cities: { type: "vector", url: "https://tiles.test/cities.json" } },
+    });
+
+    assert.deepEqual(handle.map.callsTo("addLayer"), []);
+    assert.deepEqual(handle.map.layerIds(), []);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /the new style already defines a source called "cities"/);
+    assert.match(logged.warnings[0], /"cities-circles", "cities-labels"/);
+
+    // Nor does a later change to one of them put it on the style's source.
+    handle.setSpec("cities-circles", { ...CIRCLES.spec, paint: { "circle-radius": 6 } });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+  });
 });
 
 describe("events", () => {

@@ -138,9 +138,10 @@ defmodule HoloMap.API do
   @doc """
   Replaces the whole style.
 
-  Prefer `HoloMap.Map`'s `style` prop; a style swap discards every source and
-  layer, and the reconciler re-declares the ones it owns on the next
-  `styledata` event.
+  Prefer `HoloMap.Map`'s `style` prop. Either way the new style is built from
+  scratch: a style swap discards every source, layer and registered image, and
+  the reconciler re-declares the ones it owns on the next `style.load` event.
+  Calls made while the new style loads wait for it.
   """
   @spec set_style(String.t(), String.t() | map()) :: :ok
   def set_style(cid, style), do: Runtime.call(cid, "setStyle", [style])

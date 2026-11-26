@@ -75,8 +75,9 @@ defmodule HoloMap.Image do
   ## Lifetime
 
   The image is registered while the component renders and removed when it stops.
-  Registered images survive a style change, unlike sources and layers, so
-  swapping `HoloMap.Map`'s `style` does not cost you the icons.
+  A style change discards registered images along with sources and layers, and
+  the runtime registers them again once the new style has loaded, so swapping
+  `HoloMap.Map`'s `style` does not cost you the icons.
 
   Removing an image that a layer still references is not an error; that layer
   goes back to drawing nothing.
