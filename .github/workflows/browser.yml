@@ -9,9 +9,11 @@ name: Browser suites
 # would put someone else's infrastructure in this project's critical path and
 # make the build fail for reasons that have nothing to do with the change.
 #
-# Manual only: run it when a change actually touches the runtime, or to check a
-# new MapLibre release.
+# Weekly is enough to catch a MapLibre release or a moved asset, and the manual
+# trigger is there for when a change actually touches the runtime.
 on:
+  schedule:
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
 concurrency:
