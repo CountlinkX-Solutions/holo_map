@@ -138,6 +138,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   image in place and logged an error, because MapLibre's `updateImage` accepts
   only an image of the same size. Such an image is now registered again, with
   the same options; one of the same size is still updated in place.
+- When a new style already defined a source or layer with a component's `id`,
+  the runtime left that id to the style with a warning, but went on treating it
+  as its own: removing the component removed the style's source, a data or
+  structural change to it rewrote or replaced the style's source, a prop change
+  to a layer component changed the style's layer, a structural change to a
+  source took the style's layer of a layer component's `id` off the map and put
+  the component's back, and a `before_id` moved the style's layer. Until the
+  style changes again, such a component now leaves the style's source or layer
+  alone.
 
 ## [0.1.0] - 2026-08-23
 

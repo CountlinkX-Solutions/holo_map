@@ -1555,6 +1555,60 @@ describe("style reload", () => {
 
     assert.deepEqual(handle.map.layerIds(), []);
   });
+
+  // The id stays the style's until the style changes again, so nothing the
+  // component of that id does reaches the style's source.
+  test("leaves a source the new style took over to it when its component changes or goes", async () => {
+    const handle = mountMap({ defs: [SOURCE] });
+    handle.map.loadStyle();
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.loadStyle({ sources: { cities: { type: "geojson", data: POINTS } } });
+    const theirs = handle.map.getSource("cities");
+    handle.map.calls.length = 0;
+
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS }, "source");
+    await settle();
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS, cluster: true }, "source");
+    await settle();
+    handle.remove("cities", "source");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, ["setData", "removeSource", "addSource"]), []);
+    assert.equal(handle.map.getSource("cities"), theirs);
+  });
+
+  test("leaves a layer the new style took over to it, whatever its component does", async () => {
+    const circles = { ...CIRCLES, spec: { ...CIRCLES.spec, beforeId: "water" } };
+    const labels = { ...LABELS, spec: { ...LABELS.spec, beforeId: "cities-circles" } };
+    const handle = mountMap({ defs: [SOURCE, circles, labels] });
+    handle.map.loadStyle();
+    handle.setSpec("map", { style: DARK });
+    await settle();
+
+    const theirs = { id: "cities-labels", type: "background", paint: {}, layout: {} };
+    handle.map.loadStyle({ layers: [{ id: "water", type: "background" }, theirs] });
+
+    // Its component's before_id does not move it.
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "water", "cities-labels"]);
+
+    handle.map.calls.length = 0;
+    const layout = { "text-field": ["get", "name"], "text-size": 14 };
+    handle.setSpec("cities-labels", { ...labels.spec, layout }, "layer");
+    await settle();
+    // A structural change to the source takes its own layers off and back on.
+    handle.setSpec("cities", { ...SOURCE.spec, cluster: true }, "source");
+    await settle();
+    handle.remove("cities-labels", "layer");
+    await settle();
+
+    const touched = handle.map.calls.filter(
+      ([, target]) => target === "cities-labels" || (target && target.id === "cities-labels"),
+    );
+    assert.deepEqual(touched, []);
+    assert.equal(handle.map.getLayer("cities-labels").type, "background");
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "water", "cities-labels"]);
+  });
 });
 
 describe("events", () => {
