@@ -29,34 +29,29 @@ class Evented {
     this.handlers = [];
   }
 
-  // Mirrors MapLibre's two signatures: on(type, listener) and, for layer
-  // events, on(type, layerId, listener).
-  on(type, ...rest) {
-    const [layer, listener] = rest.length === 2 ? rest : [null, rest[0]];
-    this.handlers.push({ type, layer, listener });
+  on(type, listener) {
+    this.handlers.push({ type, listener });
     return this;
   }
 
-  off(type, ...rest) {
-    const [layer, listener] = rest.length === 2 ? rest : [null, rest[0]];
-
+  off(type, listener) {
     this.handlers = this.handlers.filter(
-      (handler) =>
-        handler.type !== type || handler.layer !== layer || handler.listener !== listener,
+      (handler) => handler.type !== type || handler.listener !== listener,
     );
 
     return this;
   }
 
-  fire(type, event = {}, layer = null) {
+  // Calls the listeners of `type` in the order they were added, as MapLibre
+  // does. One added by another listener first hears the next event.
+  fire(type, event = {}) {
     this.handlers
-      .filter((handler) => handler.type === type && handler.layer === layer)
+      .filter((handler) => handler.type === type)
       .forEach((handler) => handler.listener(event));
   }
 
-  listenerCount(type, layer = null) {
-    return this.handlers.filter((handler) => handler.type === type && handler.layer === layer)
-      .length;
+  listenerCount(type) {
+    return this.handlers.filter((handler) => handler.type === type).length;
   }
 }
 
@@ -84,6 +79,9 @@ class FakeMap extends Evented {
     // Features a test places under the pointer, by layer id, for the layer
     // events a click delegates.
     this.featuresUnderPointer = {};
+    // The listeners added for a layer, each with the delegate MapLibre adds
+    // as a listener of the map in its place.
+    this.delegates = [];
 
     // MapLibre builds this inside the container and puts marker elements in
     // it. Its own `click` comes from DOM clicks that bubble up to it, through
@@ -114,10 +112,10 @@ class FakeMap extends Evented {
     return this.canvasContainer;
   }
 
-  // The map `click` MapLibre fires for a DOM click that reached the canvas
-  // container, then the layer `click`s it delegates from that same event for
-  // the features under the pointer. Nothing is projected: every click lands
-  // on the camera's centre.
+  // The map `click` MapLibre fires, synchronously, for a DOM click that
+  // reached the canvas container. Its listeners run in the order they were
+  // added, layer listeners among them. Nothing is projected: every click
+  // lands on the camera's centre.
   click(originalEvent) {
     const event = {
       type: "click",
@@ -127,10 +125,77 @@ class FakeMap extends Evented {
     };
 
     this.fire("click", event);
+  }
 
-    Object.entries(this.featuresUnderPointer).forEach(([layer, features]) => {
-      this.fire("click", { ...event, features }, layer);
-    });
+  // MapLibre's on(type, layerId, listener) adds a delegate as an ordinary
+  // listener of the map, so a layer's listener runs among the map's own, in
+  // the order each was added. The delegate calls it only while features of
+  // the layer are under the pointer, with those features put on the event
+  // for the call and taken off again. MapLibre makes `mouseenter` and
+  // `mouseleave` from other events; that is not modelled.
+  on(type, ...rest) {
+    if (rest.length === 1) {
+      return super.on(type, rest[0]);
+    }
+
+    const [layer, listener] = rest;
+
+    const delegate = (event) => {
+      const features = this.getLayer(layer) ? this.featuresUnderPointer[layer] || [] : [];
+
+      if (features.length > 0) {
+        event.features = features;
+        listener(event);
+        delete event.features;
+      }
+    };
+
+    this.delegates.push({ type, layer, listener, delegate });
+    return super.on(type, delegate);
+  }
+
+  off(type, ...rest) {
+    if (rest.length === 1) {
+      return super.off(type, rest[0]);
+    }
+
+    const [layer, listener] = rest;
+    const found = this.delegates.find(
+      (each) => each.type === type && each.layer === layer && each.listener === listener,
+    );
+
+    if (found) {
+      this.delegates = this.delegates.filter((each) => each !== found);
+      super.off(type, found.delegate);
+    }
+
+    return this;
+  }
+
+  // Emits `type`, or with `layer`, hands `event` straight to that layer's
+  // listeners, as though the features it carries were under the pointer.
+  fire(type, event = {}, layer = null) {
+    if (layer === null) {
+      super.fire(type, event);
+      return;
+    }
+
+    this.delegates
+      .filter((each) => each.type === type && each.layer === layer)
+      .forEach((each) => each.listener(event));
+  }
+
+  // The listeners added for `layer`, or without one.
+  listenerCount(type, layer = null) {
+    if (layer !== null) {
+      return this.delegates.filter((each) => each.type === type && each.layer === layer).length;
+    }
+
+    const delegates = new Set(this.delegates.map((each) => each.delegate));
+
+    return this.handlers.filter(
+      (handler) => handler.type === type && !delegates.has(handler.listener),
+    ).length;
   }
 
   record(name, ...args) {

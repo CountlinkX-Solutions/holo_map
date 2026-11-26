@@ -128,6 +128,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   position and text selection on every move and, with `focus_after_open`, took
   keyboard focus back. The content is now rewritten only when `html` or the
   slot content changes what the popup shows.
+- A layer's `on_click` was dispatched before the `on_close` of a
+  `close_on_click` popup that the same click closed, whenever the popup had
+  opened after the layer was added, which is the usual case for a popup
+  showing a selected feature. A popup whose `on_close` clears the selection
+  therefore undid the selection made by clicking another feature. A layer's
+  `on_click` is now dispatched once the click has finished, as a marker's is.
 
 ## [0.1.0] - 2026-08-23
 

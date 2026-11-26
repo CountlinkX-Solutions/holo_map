@@ -1624,6 +1624,8 @@ describe("events", () => {
       { lngLat: { lng: -69.9, lat: 18.5 }, point: { x: 120, y: 80 }, features: [feature] },
       "cities-circles",
     );
+    // A click is reported once the DOM click has finished.
+    await nextTask();
 
     assert.deepEqual(dispatched, [
       [
@@ -1763,6 +1765,39 @@ describe("events", () => {
     ]);
   });
 
+  // The same pattern with features: the popup opens once a feature has been
+  // selected, so after the layer's listener was added, and MapLibre runs the
+  // listeners of the map's `click` in the order they were added.
+  test("reports a layer click after the close of the popup that click dismisses", async () => {
+    const handle = mountMap({
+      defs: [SOURCE, { ...CIRCLES, events: { click: { action: "select", target: "page" } } }],
+    });
+    handle.map.loadStyle();
+    handle.add({
+      kind: "popup",
+      key: "details",
+      spec: { lngLat: [-69.9, 18.5] },
+      events: { close: { action: "clear", target: "page" } },
+      content: "<h3>Santo Domingo</h3>",
+    });
+    await settle();
+
+    const [popup] = handle.map.popups;
+    const santiago = { id: 2, properties: { name: "Santiago" }, geometry: null };
+    handle.map.featuresUnderPointer = { "cities-circles": [santiago] };
+
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["clear", "select"],
+    );
+    assert.deepEqual(dispatched[1][2].features, [
+      { id: 2, source: null, source_layer: null, properties: { name: "Santiago" }, geometry: null },
+    ]);
+  });
+
   test("reports a marker click to the marker alone, not to the map or a layer under it", async () => {
     const handle = mountMap({
       events: { click: { action: "map_clicked", target: "page" } },
@@ -1788,6 +1823,7 @@ describe("events", () => {
     // A click anywhere else on the map still reaches both.
     dispatched.length = 0;
     handle.map.getCanvasContainer().dispatchEvent({ type: "click" });
+    await nextTask();
 
     assert.deepEqual(
       dispatched.map(([action]) => action),
