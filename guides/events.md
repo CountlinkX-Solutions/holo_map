@@ -134,19 +134,26 @@ def action(:parcel_clicked, params, component) do
 end
 ```
 
-`features` is a list because layers overlap; it is empty for a click on empty
-space when the event is bound to the map rather than a layer. Match on it rather
-than assuming a head.
+`features` is a list because layers overlap, and it can be empty: MapLibre
+reports `on_mouse_leave` without features. Match on it rather than assuming a
+head. Map events carry no `features` at all.
 
 ### Popup events
 
 `on_open`, `on_close`. Neither carries a payload.
 
-`on_close` fires for every close, including the ones MapLibre performs without
-asking: the close button, a click on the map (`close_on_click` is on by
-default) and a camera move. Handle it by clearing whatever state opened the
-popup. Otherwise the component still believes the popup is open, and clicking
-the same feature again re-renders nothing.
+`on_close` fires for every close MapLibre performs without asking: the close
+button, a click on the map (`close_on_click` is on by default) and a camera
+move. Handle it by clearing whatever state opened the popup. Otherwise the
+component still believes the popup is open, and clicking the same feature
+again re-renders nothing.
+
+Neither event fires when your application closes the popup by no longer
+rendering it, since that close already comes from your state, nor when a
+change to `anchor`, `close_button`, `close_on_click`, `close_on_move` or
+`focus_after_open` replaces an open popup with one built with the new options.
+`on_open` fires when the popup first renders, and when a changed declaration
+reopens a popup MapLibre had closed.
 
 ```elixir
 def action(:selection_cleared, _params, component) do

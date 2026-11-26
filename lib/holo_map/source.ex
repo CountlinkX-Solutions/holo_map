@@ -11,9 +11,9 @@ defmodule HoloMap.Source do
       <HoloMap.Layer.Fill id="parcels-fill" source="parcels" paint={%{fill_color: "#3b82f6"}} />
       <HoloMap.Layer.Line id="parcels-line" source="parcels" paint={%{line_color: "#1e40af"}} />
 
-  Layers reference a source by its `id`. Declare the source before the layers
-  that use it. The reconciler applies definitions in document order, and a
-  layer whose source is not there yet is dropped by MapLibre.
+  Layers reference a source by its `id`, and may be declared before or after
+  it. A layer whose source is not on the map yet waits for it, and is added in
+  its declared place as soon as the source is.
 
   ## Available sources
 

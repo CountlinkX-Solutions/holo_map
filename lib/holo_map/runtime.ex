@@ -15,7 +15,7 @@ defmodule HoloMap.Runtime do
   > #### Interop runs in actions only {: .warning}
   >
   > Hologram executes JS interop exclusively inside action handlers. Calling
-  > these functions from `init/2`, `init/3` or a command silently does nothing
+  > these functions from `init/2`, `init/3` or a command silently does nothing.
   > On the server they are compiled to no-ops. `HoloMap.Map` therefore boots
   > through `put_action/2` rather than directly from `init/3`.
   """

@@ -153,6 +153,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the destroyed map. Calls are queued again once the map boots again, or once a
   page has moved its container away, so a page that renders the map again still
   hands it the calls made before its boot.
+- Module docs and guides that contradicted the runtime are corrected, among
+  them how long an imperative change lasts, when a popup's `on_open` and
+  `on_close` fire, and the MapLibre GL JS release that introduced the globe
+  control (5.0.0, not 6).
+
+### Security
+
+- Locked dependencies with published advisories were refreshed: Phoenix
+  1.8.17, Plug 1.20.4 and Plug.Crypto 2.2.1 in the library's lockfile, and the
+  same plus Bandit 1.15.0 and `source-map-js` in the demo's. No version
+  requirement changed, so applications resolve their own versions as before.
 
 ## [0.1.0] - 2026-08-23
 
@@ -171,7 +182,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   style's own sprite carries are reachable, and naming anything else fails
   silently: MapLibre emits `styleimagemissing` and draws nothing.
 - Controls: `HoloMap.Control.Navigation`, `.Scale`, `.Geolocate`, `.Fullscreen`,
-  `.Attribution`, plus `.Globe` and `.Terrain`, both new in MapLibre GL JS 6.
+  `.Attribution`, `.Globe` and `.Terrain`.
 - 3D: `HoloMap.Terrain` and `HoloMap.Sky`.
 - `HoloMap.API`: `fly_to/2`, `ease_to/2`, `jump_to/2`, `fit_bounds/3`,
   `resize/1`, `set_style/2`, `set_filter/3`, `set_paint_property/4`,

@@ -4,9 +4,10 @@ defmodule HoloMap.Control.Globe do
 
       <HoloMap.Control.Globe position="top-right" />
 
-  New in MapLibre GL JS 6. The projection is a rendering choice, not data: the
-  same sources and layers draw either way, and nothing in your components needs
-  to know which is active.
+  It adds MapLibre's `GlobeControl`, which MapLibre GL JS has shipped since
+  5.0.0. The projection is a rendering choice, not data: the same sources and
+  layers draw either way, and nothing in your components needs to know which
+  is active.
 
   ## Props
 
