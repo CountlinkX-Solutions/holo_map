@@ -132,11 +132,20 @@ class FakeMap extends Evented {
     this.sources.delete(id);
   }
 
+  // MapLibre validates a layer against the style before adding it. A layer
+  // that fails is reported as an error and left off the map, not thrown.
   addLayer(layer, before) {
     this.record("addLayer", layer, before);
 
     if (this.getLayer(layer.id)) {
       throw new Error(`Layer "${layer.id}" already exists on this map.`);
+    }
+
+    const invalid = this.layerError(layer);
+
+    if (invalid) {
+      this.reportError(new Error(`layers.${layer.id}: ${invalid}`));
+      return;
     }
 
     const at = before === undefined ? -1 : this.layers.findIndex((each) => each.id === before);
@@ -146,6 +155,37 @@ class FakeMap extends Evented {
       this.layers.push(copy);
     } else {
       this.layers.splice(at, 0, copy);
+    }
+  }
+
+  // Why MapLibre's layer validation would refuse `layer`, or null. Only two of
+  // its checks are modelled: a source the style does not hold, and a vector
+  // source with no `source-layer` to read from.
+  layerError(layer) {
+    if (layer.type === "background" || layer.source === undefined) {
+      return null;
+    }
+
+    const source = this.getSource(layer.source);
+
+    if (!source) {
+      return `source "${layer.source}" not found`;
+    }
+
+    if (source.type === "vector" && !layer["source-layer"]) {
+      return `layer "${layer.id}" must specify a "source-layer"`;
+    }
+
+    return null;
+  }
+
+  // MapLibre fires an `error` event rather than throwing, and logs the error
+  // with console.error when nothing listens for it.
+  reportError(error) {
+    if (this.listenerCount("error") > 0) {
+      this.fire("error", { error });
+    } else {
+      console.error(error);
     }
   }
 

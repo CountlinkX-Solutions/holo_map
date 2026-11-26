@@ -116,6 +116,11 @@ describe("add", () => {
 
     map.loadStyle();
 
+    assert.deepEqual(sequence(map, ["addSource", "addLayer"]), [
+      ["addSource", "cities"],
+      ["addLayer", "cities-circles"],
+      ["addLayer", "cities-labels"],
+    ]);
     assert.deepEqual(map.callsTo("addSource"), [["cities", { type: "geojson", data: POINTS }]]);
     assert.deepEqual(
       map.callsTo("addLayer").map(([layer]) => layer),
@@ -463,13 +468,22 @@ describe("style reload", () => {
     handle.map.calls.length = 0;
     handle.map.loadStyle({ layers: [{ id: "background", type: "background" }] });
 
+    assert.deepEqual(sequence(handle.map, ["addSource", "addLayer"]), [
+      ["addSource", "cities"],
+      ["addLayer", "cities-circles"],
+      ["addLayer", "cities-labels"],
+    ]);
     assert.deepEqual(handle.map.callsTo("addSource"), [["cities", SOURCE.spec]]);
     assert.deepEqual(handle.map.layerIds(), ["background", "cities-circles", "cities-labels"]);
     assert.deepEqual([...handle.map.markers], [marker]);
   });
 
   test("leaves an id the new style already uses to that style, with a warning", () => {
-    const handle = loadedCitiesMap();
+    // Only the source is declared. Layers on it would be re-added to the
+    // style's vector source, which refuses a layer with no "source-layer".
+    const handle = mountMap({ defs: [SOURCE] });
+    handle.map.loadStyle();
+    handle.map.calls.length = 0;
 
     handle.map.loadStyle({
       sources: { cities: { type: "vector", url: "https://tiles.test/cities.json" } },
@@ -477,7 +491,6 @@ describe("style reload", () => {
 
     assert.deepEqual(handle.map.callsTo("addSource"), []);
     assert.equal(handle.map.getSource("cities").type, "vector");
-    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
     assert.equal(logged.warnings.length, 1);
     assert.match(logged.warnings[0], /the new style already defines a source called "cities"/);
   });
