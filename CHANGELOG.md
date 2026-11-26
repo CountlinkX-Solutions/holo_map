@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-26
+
 ### Fixed
 
 - `HoloMap.Marker`'s `on_click`, `on_drag_start`, `on_drag` and `on_drag_end`
@@ -251,5 +253,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Elixir 1.19+, OTP 28.1+, Hologram 0.11+
 - MapLibre GL JS 6.x, installed and served by the host application
 
-[Unreleased]: https://github.com/CountlinkX-Solutions/holo_map/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/CountlinkX-Solutions/holo_map/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CountlinkX-Solutions/holo_map/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CountlinkX-Solutions/holo_map/releases/tag/v0.1.0
