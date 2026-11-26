@@ -87,7 +87,7 @@ of the library testable at all.
 | Attribute | Meaning |
 | --------- | ------- |
 | `data-hm` | Kind: `map`, `source`, `layer`, `marker`, `popup`, `control`, `terrain`, `sky` |
-| `data-hm-key` | Identity. Stable across re-renders; changing it is a remove plus an add |
+| `data-hm-key` | Identity, unique among definitions of the same kind: a source and a layer may share one. Stable across re-renders; changing it is a remove plus an add |
 | `data-hm-map` | The cid of the owning map |
 | `data-hm-spec` | The MapLibre specification, JSON-encoded |
 | `data-hm-events` | Event name → dispatch descriptor, JSON-encoded |
@@ -120,13 +120,14 @@ Not every prop change costs the same. In rough order:
 | A paint or layout property | `setPaintProperty` / `setLayoutProperty`. Free |
 | A layer filter | `setFilter`. Free |
 | A layer zoom range | `setLayerZoomRange`. Free |
+| A layer's `before_id` | `moveLayer`. Free |
 | A GeoJSON source's `data` | `setData`. Free; no layer is disturbed |
 | An image source's `url` or `coordinates` | `updateImage`. Free |
 | The map's `center` / `zoom` / `bearing` / `pitch` | `jumpTo`. Free |
-| A layer's `type`, `source` or `source_layer` | Remove and re-add the layer |
-| Any other source key | Detach the dependent layers, rebuild the source, re-add them |
+| A layer's `type`, `source` or `source_layer` | Remove and re-add the layer, at its place |
+| Any other source key | Detach the dependent layers, rebuild the source, re-add them at their places |
 | The map's `style` | Everything is discarded and re-declared on the next `style.load` |
-| A control's props | Remove and re-add the control |
+| A control's props | Remove and re-add the control, at its place in its corner |
 
 The practical guidance: put frequently-changing data in a GeoJSON source's
 `data` prop and frequently-changing appearance in `paint`. Both are free.

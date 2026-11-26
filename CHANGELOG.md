@@ -42,6 +42,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dispatched once the click has finished propagating, after the `on_close` of
   any popup it closed, so a popup whose `on_close` clears the selection no
   longer undoes the selection made by clicking another marker.
+- A source, a layer and a `HoloMap.Image` that shared an `id`, as a source and
+  the layer drawing it often do, replaced one another on every render, leaving
+  the map without the source or the layer. The same happened to a layer called
+  `terrain` or `sky` next to `HoloMap.Terrain` or `HoloMap.Sky`. Definitions are
+  now told apart by kind as well as `id`, and MapLibre still receives the `id`
+  unchanged. This also fixes a definition that changed from a source or layer
+  to a marker, popup or control before the style had loaded: its new object
+  lost its events, and removing the definition left it on the map.
+- A layer whose source did not exist yet was handed to MapLibre anyway, which
+  refused it with a "source not found" error, and nothing added it later: a
+  layer written above its source, a layer rendered while its source was not,
+  and the layers of a source that was removed and rendered again all stayed
+  missing. Such a layer now waits for its source and is added, in declared
+  order, as soon as the source is.
+- Layers and controls kept their declared order only on first load. A layer
+  rendered conditionally, re-added because its `type`, `source` or
+  `source_layer` changed, or re-added by a structural source change went on top
+  of every other layer; a changed `before_id` was ignored; and a `before_id`
+  naming a layer declared further down, or not rendered yet, was dropped for
+  good. Each layer is now placed where the template puts it, a `before_id`
+  change moves the layer, and a `before_id` takes effect once the layer it
+  names is on the map. A control rendered conditionally, or replaced by a prop
+  change, went to the far end of its corner; it now goes back to its declared
+  place, and the controls around it are left as they are.
 
 ## [0.1.0] - 2026-08-23
 

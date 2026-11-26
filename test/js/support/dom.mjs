@@ -1,9 +1,10 @@
 // A document just large enough for runtime.mjs.
 //
 // The runtime touches a small slice of the DOM: elements with attributes and
-// children, `getElementById`, `querySelector(All)` with attribute and class
-// selectors, `innerHTML` as an opaque string, `isConnected`, DOM listeners with
-// bubbling, and MutationObserver. Implementing that slice here keeps the unit
+// children (appended, inserted and walked as siblings), `getElementById`,
+// `querySelector(All)` with attribute and class selectors, `innerHTML` as an
+// opaque string, `isConnected`, DOM listeners with bubbling, and
+// MutationObserver. Implementing that slice here keeps the unit
 // tests free of any npm dependency, so `node --test` runs them on a fresh
 // checkout.
 //
@@ -80,6 +81,23 @@ class Element {
     notify(this, { type: "attributes", attributeName: name });
   }
 
+  get firstElementChild() {
+    return this.children[0] || null;
+  }
+
+  get lastElementChild() {
+    return this.children[this.children.length - 1] || null;
+  }
+
+  get nextSibling() {
+    if (!this.parentNode) {
+      return null;
+    }
+
+    const siblings = this.parentNode.children;
+    return siblings[siblings.indexOf(this) + 1] || null;
+  }
+
   appendChild(child) {
     if (child.parentNode) {
       child.parentNode.removeChild(child);
@@ -87,6 +105,30 @@ class Element {
 
     child.parentNode = this;
     this.children.push(child);
+    notify(this, { type: "childList", attributeName: null });
+
+    return child;
+  }
+
+  // Puts `child` before `reference`, or last when `reference` is null, and
+  // throws as the DOM does when `reference` is not a child of this element.
+  insertBefore(child, reference) {
+    if (reference === null || reference === undefined) {
+      return this.appendChild(child);
+    }
+
+    if (child.parentNode) {
+      child.parentNode.removeChild(child);
+    }
+
+    const at = this.children.indexOf(reference);
+
+    if (at === -1) {
+      throw new Error("insertBefore: the reference node is not a child of this node");
+    }
+
+    child.parentNode = this;
+    this.children.splice(at, 0, child);
     notify(this, { type: "childList", attributeName: null });
 
     return child;

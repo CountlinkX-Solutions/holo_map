@@ -32,7 +32,7 @@ defmodule HoloMap.Source do
     * An image source whose `url` or `coordinates` changed uses `updateImage`.
     * Any other change is structural. MapLibre refuses to remove a source that
       still has layers attached, so the reconciler detaches the layers it owns,
-      swaps the source, and puts them back in their declared order.
+      swaps the source, and puts them back where they were in the stack.
 
   Frequently-changing data therefore belongs in a GeoJSON source's `data`
   prop, which is the one path with no teardown.

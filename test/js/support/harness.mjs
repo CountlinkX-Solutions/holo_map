@@ -82,9 +82,14 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
 
   runtime.boot(cid);
 
-  // The definition element for `key`.
-  const def = (key) =>
-    holder.children.find((element) => element.getAttribute("data-hm-key") === key);
+  // The definition element for `key`. Definitions of different kinds can
+  // share a key, as a source and its layer often do, so `kind` picks one.
+  const def = (key, kind) =>
+    holder.children.find(
+      (element) =>
+        element.getAttribute("data-hm-key") === key &&
+        (kind === undefined || element.getAttribute("data-hm") === kind),
+    );
 
   const handle = {
     cid,
@@ -92,9 +97,12 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
     wrapper,
     map: maplibre.maps[maplibre.maps.length - 1],
     def,
-    add: (spec) => holder.appendChild(definition(cid, spec)),
-    remove: (key) => holder.removeChild(def(key)),
-    setSpec: (key, value) => def(key).setAttribute("data-hm-spec", JSON.stringify(value)),
+    // Appends a definition, or renders it just before the one keyed `before`.
+    add: (spec, before) =>
+      holder.insertBefore(definition(cid, spec), before === undefined ? null : def(before)),
+    remove: (key, kind) => holder.removeChild(def(key, kind)),
+    setSpec: (key, value, kind) =>
+      def(key, kind).setAttribute("data-hm-spec", JSON.stringify(value)),
     unmount() {
       runtime.destroy(cid);
       wrapper.remove();

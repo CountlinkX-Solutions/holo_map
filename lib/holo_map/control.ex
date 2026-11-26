@@ -34,8 +34,9 @@ defmodule HoloMap.Control do
   ## Updates
 
   Controls carry no updatable state that is worth diffing, so any prop change
-  removes and re-adds the control. That is invisible for the built-ins here,
-  but it does mean a control is not the place to put a rapidly changing value.
+  removes and re-adds the control, which keeps its place in its corner. That is
+  invisible for the built-ins here, but it does mean a control is not the place
+  to put a rapidly changing value.
   """
 
   @positions ~w(top-left top-right bottom-left bottom-right)

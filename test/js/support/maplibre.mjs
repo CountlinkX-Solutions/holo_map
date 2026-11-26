@@ -1,8 +1,8 @@
 // Stands in for maplibre-gl in the runtime unit tests.
 //
 // Every class records the calls the runtime makes and keeps just the state
-// those calls imply (the sources, the layer stack, controls, markers and
-// popups on the map, a marker's popup and alignment, a popup's options and
+// those calls imply (the sources, the layer stack, images, controls in their
+// corners, markers and popups on the map, a marker's popup and alignment, a popup's options and
 // classes), so a test can assert both on what was asked and on what a real
 // map would now hold. Nothing here renders, fetches or parses.
 //
@@ -64,6 +64,9 @@ class FakeMap extends Evented {
     this.calls = [];
     this.sources = new Map();
     this.layers = [];
+    // Registered images by name. A style arriving leaves them alone: no test
+    // swaps styles with images registered.
+    this.images = new Map();
     this.controls = [];
     this.markers = new Set();
     this.popups = new Set();
@@ -81,6 +84,20 @@ class FakeMap extends Evented {
     this.canvasContainer.className = "maplibregl-canvas-container";
     this.canvasContainer.addEventListener("click", (event) => this.click(event));
     options.container.appendChild(this.canvasContainer);
+
+    // One element per corner for the controls, with MapLibre's class names.
+    this.controlContainer = document.createElement("div");
+    this.controlContainer.className = "maplibregl-control-container";
+    this.corners = {};
+
+    ["top-left", "top-right", "bottom-left", "bottom-right"].forEach((position) => {
+      const corner = document.createElement("div");
+      corner.className = `maplibregl-ctrl-${position} `;
+      this.controlContainer.appendChild(corner);
+      this.corners[position] = corner;
+    });
+
+    options.container.appendChild(this.controlContainer);
 
     maps.push(this);
   }
@@ -187,14 +204,18 @@ class FakeMap extends Evented {
       return;
     }
 
-    const at = before === undefined ? -1 : this.layers.findIndex((each) => each.id === before);
-    const copy = { ...layer, paint: { ...layer.paint }, layout: { ...layer.layout } };
+    // Without `before` the layer goes on top. A `before` naming no layer is
+    // an error, and the layer is left off the map.
+    const at = before ? this.layers.findIndex((each) => each.id === before) : this.layers.length;
 
     if (at === -1) {
-      this.layers.push(copy);
-    } else {
-      this.layers.splice(at, 0, copy);
+      this.reportError(
+        new Error(`Cannot add layer "${layer.id}" before non-existing layer "${before}".`),
+      );
+      return;
     }
+
+    this.layers.splice(at, 0, { ...layer, paint: { ...layer.paint }, layout: { ...layer.layout } });
   }
 
   // Why MapLibre's layer validation would refuse `layer`, or null. Only two of
@@ -237,8 +258,40 @@ class FakeMap extends Evented {
     this.layers = this.layers.filter((layer) => layer.id !== id);
   }
 
+  // The layer ids, bottom to top.
+  getLayersOrder() {
+    return this.layerIds();
+  }
+
+  // MapLibre takes the layer out of its stack before looking for `before`, so
+  // a `before` naming no layer reports an error and leaves the layer out of
+  // the stack, which here means off the map.
   moveLayer(id, before) {
     this.record("moveLayer", id, before);
+    const layer = this.getLayer(id);
+
+    if (!layer) {
+      this.reportError(
+        new Error(`The layer '${id}' does not exist in the map's style and cannot be moved.`),
+      );
+      return;
+    }
+
+    if (id === before) {
+      return;
+    }
+
+    this.layers = this.layers.filter((each) => each !== layer);
+    const at = before ? this.layers.findIndex((each) => each.id === before) : this.layers.length;
+
+    if (at === -1) {
+      this.reportError(
+        new Error(`Cannot move layer "${id}" before non-existing layer "${before}".`),
+      );
+      return;
+    }
+
+    this.layers.splice(at, 0, layer);
   }
 
   setPaintProperty(id, name, value) {
@@ -264,20 +317,75 @@ class FakeMap extends Evented {
     this.record("setTerrain", terrain);
   }
 
+  // --- images --------------------------------------------------------------
+
+  // Resolves the way MapLibre's image request does, with the image under
+  // `data`. Nothing is fetched: the image stands in as its URL.
+  loadImage(url) {
+    this.record("loadImage", url);
+    return Promise.resolve({ data: { url } });
+  }
+
+  hasImage(id) {
+    return this.images.has(id);
+  }
+
+  // Both report a name that is taken, or missing, as an error event.
+  addImage(id, image, options = {}) {
+    this.record("addImage", id, image, options);
+
+    if (this.images.has(id)) {
+      this.reportError(new Error(`An image named "${id}" already exists.`));
+      return;
+    }
+
+    this.images.set(id, { image, options });
+  }
+
+  removeImage(id) {
+    this.record("removeImage", id);
+
+    if (!this.images.has(id)) {
+      this.reportError(new Error(`An image named "${id}" does not exist.`));
+      return;
+    }
+
+    this.images.delete(id);
+  }
+
   setSky(sky) {
     this.record("setSky", sky);
   }
 
   // --- overlays ------------------------------------------------------------
 
+  // MapLibre appends the control's element to a top corner and puts it first
+  // in a bottom one, so each control added lands farthest from the map's edge.
   addControl(control, position) {
     this.record("addControl", control, position);
+    const element = control.onAdd(this);
     this.controls.push({ control, position });
+
+    const corner = this.corners[position];
+
+    if (position.includes("bottom")) {
+      corner.insertBefore(element, corner.firstElementChild);
+    } else {
+      corner.appendChild(element);
+    }
   }
 
   removeControl(control) {
     this.record("removeControl", control);
     this.controls = this.controls.filter((each) => each.control !== control);
+    control.onRemove(this);
+  }
+
+  // The controls in a corner as the page shows them, top to bottom.
+  controlsIn(position) {
+    return this.corners[position].children.map(
+      (element) => this.controls.find(({ control }) => control.element === element).control,
+    );
   }
 
   // --- camera --------------------------------------------------------------
@@ -603,9 +711,22 @@ export class Popup extends Evented {
   }
 }
 
+// MapLibre's controls build an element when added to a map and take it out of
+// the page when removed.
 class Control {
   constructor(options = {}) {
     this.options = options;
+    this.element = null;
+  }
+
+  onAdd() {
+    this.element = document.createElement("div");
+    this.element.className = "maplibregl-ctrl";
+    return this.element;
+  }
+
+  onRemove() {
+    this.element.remove();
   }
 }
 

@@ -12,7 +12,7 @@ defmodule HoloMap.Def do
   | Attribute | Meaning |
   | --------- | ------- |
   | `data-hm` | The kind of definition: `source`, `layer`, `marker`, `popup`, `control`, `terrain`, `sky` |
-  | `data-hm-key` | Identity. Stable across re-renders; changing it is a remove plus an add |
+  | `data-hm-key` | Identity, unique among definitions of the same kind: a source and a layer may share one. Stable across re-renders; changing it is a remove plus an add |
   | `data-hm-spec` | The MapLibre specification, JSON-encoded |
   | `data-hm-events` | Event name to action-dispatch descriptor, JSON-encoded |
   | `data-hm-map` | The cid of the owning map. Debugging aid; the reconciler uses DOM containment |

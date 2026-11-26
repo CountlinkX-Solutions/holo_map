@@ -614,6 +614,227 @@ describe("remove", () => {
   });
 });
 
+// MapLibre refuses a layer whose source it does not hold. The runtime holds
+// the layer back instead, and adds it when the source appears.
+describe("layers waiting for their source", () => {
+  test("adds a layer written above its source once the source is added", () => {
+    const { map } = mountMap({ defs: [CIRCLES, SOURCE, LABELS] });
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("adds layers rendered without their source once the source is rendered", async () => {
+    const handle = mountMap({ defs: [CIRCLES, LABELS] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+
+    handle.add(SOURCE);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("restores a source's layers in declared order when it is rendered again", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.remove("cities");
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+    assert.equal(handle.map.getSource("cities"), undefined);
+
+    handle.add(SOURCE);
+    await settle();
+
+    assert.ok(handle.map.getSource("cities"));
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+});
+
+// Layers stack in template order, `before_id` aside, and controls stack in a
+// corner in declared order, however late each one reaches the map.
+describe("order", () => {
+  const HIGHLIGHT = {
+    kind: "layer",
+    key: "cities-highlight",
+    spec: { type: "circle", source: "cities", paint: { "circle-radius": 9 } },
+  };
+
+  const HALO = { kind: "layer", key: "cities-halo", spec: { type: "circle", source: "cities" } };
+
+  // Circles beneath the labels, which are declared after them.
+  const CIRCLES_UNDER_LABELS = {
+    ...CIRCLES,
+    spec: { ...CIRCLES.spec, beforeId: "cities-labels" },
+  };
+
+  test("adds a layer rendered later at its place in the template", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.add(HIGHLIGHT, "cities-labels");
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), [
+      "cities-circles",
+      "cities-highlight",
+      "cities-labels",
+    ]);
+  });
+
+  test("re-adds a layer whose type changes at its place", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("cities-circles", { type: "heatmap", source: "cities" });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+  });
+
+  test("keeps the layers of a rebuilt source where they were", async () => {
+    const handle = mountMap({
+      defs: [
+        SOURCE,
+        CIRCLES,
+        { kind: "source", key: "roads", spec: { type: "geojson", data: POINTS } },
+        { kind: "layer", key: "roads-lines", spec: { type: "line", source: "roads" } },
+        LABELS,
+      ],
+    });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "roads-lines", "cities-labels"]);
+
+    handle.setSpec("cities", { type: "geojson", data: POINTS, cluster: true });
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("removeSource"), [["cities"]]);
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "roads-lines", "cities-labels"]);
+  });
+
+  test("moves a layer when its before_id changes", async () => {
+    const handle = mountMap({ defs: [SOURCE, CIRCLES, LABELS] });
+    handle.map.loadStyle({
+      layers: [
+        { id: "water", type: "background" },
+        { id: "places", type: "background" },
+      ],
+    });
+
+    handle.setSpec("cities-circles", { ...CIRCLES.spec, beforeId: "places" });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["water", "cities-circles", "places", "cities-labels"]);
+
+    handle.setSpec("cities-circles", CIRCLES.spec);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["water", "places", "cities-circles", "cities-labels"]);
+    assert.deepEqual(handle.map.callsTo("removeLayer"), []);
+  });
+
+  test("puts a layer beneath a before_id layer declared after it", () => {
+    const { map } = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, HALO, LABELS] });
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-halo", "cities-circles", "cities-labels"]);
+  });
+
+  test("puts a layer beneath its before_id layer once that layer is rendered", async () => {
+    const handle = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, HALO] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-halo"]);
+
+    handle.add(LABELS);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-halo", "cities-circles", "cities-labels"]);
+  });
+
+  test("puts layers that share a before_id beneath it in declared order", async () => {
+    const underLabels = (layer) => ({
+      ...layer,
+      spec: { ...layer.spec, beforeId: "cities-labels" },
+    });
+    const handle = mountMap({ defs: [SOURCE, CIRCLES_UNDER_LABELS, underLabels(HALO), HIGHLIGHT] });
+    handle.map.loadStyle();
+
+    handle.add(LABELS);
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), [
+      "cities-highlight",
+      "cities-circles",
+      "cities-halo",
+      "cities-labels",
+    ]);
+  });
+
+  const control =(key, name, position, options = {}) => ({
+    kind: "control",
+    key,
+    spec: { control: name, position, ...options },
+  });
+
+  // The controls in a corner, top to bottom, by class.
+  const corner = (map, position) =>
+    map.controlsIn(position).map((each) => each.constructor.name);
+
+  test("keeps a control's place in its corner when an update replaces it", async () => {
+    const handle = mountMap({
+      defs: [
+        control("nav", "navigation", "top-right"),
+        control("full", "fullscreen", "top-right"),
+        control("scale", "scale", "bottom-left"),
+        control("attribution", "attribution", "bottom-left"),
+      ],
+    });
+
+    // A bottom corner stacks upwards: the first declared sits at the edge.
+    assert.deepEqual(corner(handle.map, "top-right"), ["NavigationControl", "FullscreenControl"]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), ["AttributionControl", "ScaleControl"]);
+
+    handle.setSpec("nav", { control: "navigation", position: "top-right", showCompass: false });
+    handle.setSpec("scale", { control: "scale", position: "bottom-left", unit: "imperial" });
+    await settle();
+
+    assert.deepEqual(corner(handle.map, "top-right"), ["NavigationControl", "FullscreenControl"]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), ["AttributionControl", "ScaleControl"]);
+    assert.deepEqual(handle.map.controlsIn("top-right")[0].options, { showCompass: false });
+    assert.deepEqual(handle.map.controlsIn("bottom-left")[1].options, { unit: "imperial" });
+  });
+
+  test("adds a control rendered later at its place in its corner", async () => {
+    const handle = mountMap({
+      defs: [
+        control("nav", "navigation", "top-right"),
+        control("locate", "geolocate", "top-right"),
+        control("scale", "scale", "bottom-left"),
+        control("attribution", "attribution", "bottom-left"),
+      ],
+    });
+
+    handle.add(control("full", "fullscreen", "top-right"), "locate");
+    handle.add(control("globe", "globe", "bottom-left"), "attribution");
+    await settle();
+
+    assert.deepEqual(corner(handle.map, "top-right"), [
+      "NavigationControl",
+      "FullscreenControl",
+      "GeolocateControl",
+    ]);
+    assert.deepEqual(corner(handle.map, "bottom-left"), [
+      "AttributionControl",
+      "GlobeControl",
+      "ScaleControl",
+    ]);
+  });
+});
+
 describe("kind change", () => {
   test("replaces the object when a key is reused for a different kind", async () => {
     const handle = mountMap({ defs: [{ kind: "marker", key: "spot", spec: { lngLat: [0, 0] } }] });
@@ -627,6 +848,120 @@ describe("kind change", () => {
     assert.equal(handle.map.markers.size, 0);
     assert.equal(handle.map.popups.size, 1);
     assert.equal([...handle.map.popups][0].html, "<p>Spot</p>");
+  });
+
+  test("keeps the new object when a key changes kind before the style has loaded", async () => {
+    const handle = mountMap({
+      defs: [{ kind: "source", key: "spot", spec: { type: "geojson", data: POINTS } }],
+    });
+
+    const element = handle.def("spot");
+    element.setAttribute("data-hm", "marker");
+    element.setAttribute("data-hm-spec", JSON.stringify({ lngLat: [1, 2] }));
+    element.setAttribute(
+      "data-hm-events",
+      JSON.stringify({ click: { action: "spotted", target: "page" } }),
+    );
+    await settle();
+    handle.map.loadStyle();
+
+    const [marker] = handle.map.markers;
+    assert.equal(handle.map.markers.size, 1);
+    assert.equal(handle.map.getSource("spot"), undefined);
+
+    await userClick(marker.getElement());
+    assert.deepEqual(dispatched, [["spotted", "page", { lng_lat: [1, 2] }]]);
+
+    handle.remove("spot");
+    await settle();
+
+    assert.equal(handle.map.markers.size, 0);
+  });
+});
+
+// MapLibre keeps sources, layers and images apart, so one id can name one of
+// each, and terrain and sky are not named at all.
+describe("shared ids", () => {
+  const PARCELS = {
+    kind: "source",
+    key: "parcels",
+    spec: { type: "geojson", data: POINTS },
+  };
+
+  const PARCELS_FILL = {
+    kind: "layer",
+    key: "parcels",
+    spec: { type: "fill", source: "parcels", paint: { "fill-color": "#3b82f6" } },
+  };
+
+  const REBUILDS = ["addSource", "removeSource", "addLayer", "removeLayer"];
+
+  test("keeps a source and a layer that share an id, across re-renders", async () => {
+    const handle = mountMap({ defs: [PARCELS, PARCELS_FILL] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getSource("parcels").spec, PARCELS.spec);
+    assert.deepEqual(handle.map.layerIds(), ["parcels"]);
+
+    handle.map.calls.length = 0;
+    const red = { ...PARCELS_FILL.spec, paint: { "fill-color": "#ef4444" } };
+    handle.setSpec("parcels", red, "layer");
+    handle.setSpec("parcels", { type: "geojson", data: MORE_POINTS }, "source");
+    await settle();
+
+    assert.deepEqual(sequence(handle.map, REBUILDS), []);
+    assert.deepEqual(handle.map.callsTo("setPaintProperty"), [
+      ["parcels", "fill-color", "#ef4444"],
+    ]);
+    assert.deepEqual(handle.map.callsTo("setData"), [["parcels", MORE_POINTS]]);
+    assert.deepEqual(handle.map.layerIds(), ["parcels"]);
+  });
+
+  test("keeps an image, a source and a layer that share an id", async () => {
+    const handle = mountMap({
+      defs: [
+        { kind: "image", key: "stops", spec: { url: "https://tiles.test/stop.png" } },
+        { kind: "source", key: "stops", spec: { type: "geojson", data: POINTS } },
+        {
+          kind: "layer",
+          key: "stops",
+          spec: { type: "symbol", source: "stops", layout: { "icon-image": "stops" } },
+        },
+      ],
+    });
+    handle.map.loadStyle();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("stops").image, { url: "https://tiles.test/stop.png" });
+    assert.ok(handle.map.getSource("stops"));
+    assert.deepEqual(handle.map.layerIds(), ["stops"]);
+  });
+
+  test("keeps layers called terrain and sky next to the Terrain and Sky components", async () => {
+    const terrain = { source: "dem", exaggeration: 1.4 };
+    const sky = { "sky-color": "#199EF3" };
+    const handle = mountMap({
+      defs: [
+        { kind: "source", key: "dem", spec: { type: "raster-dem", tiles: ["https://dem.test"] } },
+        { kind: "layer", key: "terrain", spec: { type: "hillshade", source: "dem" } },
+        { kind: "terrain", key: "terrain", spec: terrain },
+        { kind: "layer", key: "sky", spec: { type: "background" } },
+        { kind: "sky", key: "sky", spec: sky },
+      ],
+    });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[terrain]]);
+    assert.deepEqual(handle.map.callsTo("setSky"), [[sky]]);
+    assert.deepEqual(handle.map.layerIds(), ["terrain", "sky"]);
+
+    handle.map.calls.length = 0;
+    handle.setSpec("terrain", { ...terrain, exaggeration: 2 }, "terrain");
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[{ ...terrain, exaggeration: 2 }]]);
+    assert.deepEqual(sequence(handle.map, REBUILDS), []);
+    assert.deepEqual(handle.map.layerIds(), ["terrain", "sky"]);
   });
 });
 
