@@ -1611,6 +1611,124 @@ describe("style reload", () => {
   });
 });
 
+describe("ids the style already holds", () => {
+  const DARK = "https://tiles.test/dark.json";
+  const PICKED = { click: { action: "picked", target: "page" } };
+
+  const WATER = {
+    kind: "layer",
+    key: "water",
+    spec: { type: "fill", source: "cities" },
+    events: PICKED,
+  };
+
+  // A style with a GeoJSON source called "cities" and a layer called "water".
+  const THEIRS = {
+    sources: { cities: { type: "geojson", data: POINTS } },
+    layers: [{ id: "water", type: "background" }],
+  };
+
+  // The source and the "water" layer are the style's: their components warn
+  // once each, listen to nothing, and change or remove nothing on the map.
+  async function assertLeftToStyle(handle) {
+    const source = handle.map.getSource("cities");
+
+    assert.equal(logged.warnings.length, 2);
+    assert.match(logged.warnings[0], /the style already defines a source called "cities"/);
+    // On the style's source a layer would draw the style's data.
+    assert.match(logged.warnings[0], /its layers "cities-circles" stay off the map/);
+    assert.match(logged.warnings[1], /the style already defines a layer called "water"/);
+    assert.deepEqual(handle.map.layerIds(), ["water"]);
+    assert.equal(handle.map.listenerCount("click", "water"), 0);
+
+    handle.map.calls.length = 0;
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS }, "source");
+    handle.setSpec("water", { ...WATER.spec, paint: { "fill-opacity": 0.5 } });
+    await settle();
+    handle.setSpec("cities", { type: "geojson", data: MORE_POINTS, cluster: true }, "source");
+    handle.setSpec("water", { ...WATER.spec, type: "line" });
+    await settle();
+    handle.remove("water");
+    handle.remove("cities", "source");
+    await settle();
+
+    assert.deepEqual(handle.map.calls, []);
+    assert.equal(handle.map.getSource("cities"), source);
+    assert.equal(handle.map.getLayer("water").type, "background");
+    assert.equal(logged.warnings.length, 2);
+  }
+
+  test("leaves a source and a layer to the first style when it holds their ids", async () => {
+    const handle = mountMap({ defs: [SOURCE, CIRCLES, WATER] });
+    handle.map.loadStyle(THEIRS);
+
+    await assertLeftToStyle(handle);
+  });
+
+  test("leaves a source and a layer to the style when they render after it holds their ids", async () => {
+    const handle = mountMap();
+    handle.map.loadStyle(THEIRS);
+
+    [SOURCE, CIRCLES, WATER].forEach((def) => handle.add(def));
+    await settle();
+
+    await assertLeftToStyle(handle);
+  });
+
+  // A layer can draw from a source of the style's, and one that did before
+  // the source's component rendered is still on the map.
+  test("names only the layers that stay off the map when a later source's id is the style's", async () => {
+    const handle = mountMap({ defs: [CIRCLES] });
+    handle.map.loadStyle({ sources: THEIRS.sources });
+
+    handle.add(SOURCE, "cities-circles");
+    handle.add(LABELS);
+    await settle();
+
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /, and its layers "cities-labels" stay off the map\./);
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles"]);
+  });
+
+  test("unbinds a layer's events while a new style holds its id, and binds them once it is free", async () => {
+    const handle = mountMap({ defs: [SOURCE, { ...CIRCLES, events: PICKED }] });
+    handle.map.loadStyle();
+    handle.map.featuresUnderPointer = {
+      "cities-circles": [{ id: 1, properties: {}, geometry: null }],
+    };
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.loadStyle({ layers: [{ id: "cities-circles", type: "background" }] });
+
+    assert.equal(handle.map.listenerCount("click", "cities-circles"), 0);
+
+    // Nor does a change to its events bind them to the style's layer.
+    const chosen = { click: { action: "chosen", target: "page" } };
+    handle.def("cities-circles", "layer").setAttribute("data-hm-events", JSON.stringify(chosen));
+    await settle();
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.equal(handle.map.listenerCount("click", "cities-circles"), 0);
+    assert.deepEqual(dispatched, []);
+    assert.equal(logged.warnings.length, 1);
+
+    // A style that leaves the id free gets the component's layer back, and
+    // its events with it.
+    handle.setSpec("map", { style: STYLE });
+    await settle();
+    handle.map.loadStyle();
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.equal(handle.map.getLayer("cities-circles").type, "circle");
+    assert.equal(handle.map.listenerCount("click", "cities-circles"), 1);
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["chosen"],
+    );
+  });
+});
+
 describe("events", () => {
   test("dispatches map events with the camera, except for moves the runtime made", async () => {
     const handle = mountMap({
@@ -1881,6 +1999,34 @@ describe("events", () => {
     assert.deepEqual(dispatched[1][2].features, [
       { id: 2, source: null, source_layer: null, properties: { name: "Santiago" }, geometry: null },
     ]);
+  });
+
+  // The map's own listener is added when the map boots, before any popup, so
+  // MapLibre runs it before the listener that closes the popup.
+  test("reports a map click after the close of the popup that click dismisses", async () => {
+    const handle = mountMap({
+      events: { click: { action: "select", target: "page" } },
+      defs: [
+        {
+          kind: "popup",
+          key: "details",
+          spec: { lngLat: [-69.9, 18.5] },
+          events: { close: { action: "clear", target: "page" } },
+          content: "<h3>Santo Domingo</h3>",
+        },
+      ],
+    });
+    const [popup] = handle.map.popups;
+
+    await userClick(handle.map.getCanvasContainer());
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["clear", "select"],
+    );
+    assert.deepEqual(dispatched[1][2].lng_lat, [0, 0]);
+    assert.deepEqual(dispatched[1][2].point, [0, 0]);
   });
 
   test("reports a marker click to the marker alone, not to the map or a layer under it", async () => {

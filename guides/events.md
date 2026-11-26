@@ -233,3 +233,8 @@ navigation begins can execute after the new page has mounted, which is why
 `HoloMap` refuses to dispatch from a map whose container has gone stale. Your
 handlers do not need to defend against this, but it is worth knowing why an
 action can appear to arrive late.
+
+A click is reported once the browser has finished handling it: the `on_click`
+of the map, a layer or a marker is dispatched after the `on_close` of any popup
+that the same click closed. A popup whose `on_close` clears the selection
+therefore never undoes the selection the click makes.

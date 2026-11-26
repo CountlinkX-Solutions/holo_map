@@ -157,6 +157,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   them how long an imperative change lasts, when a popup's `on_open` and
   `on_close` fire, and the MapLibre GL JS release that introduced the globe
   control (5.0.0, not 6).
+- `HoloMap.Map`'s `on_click` was dispatched before the `on_close` of a
+  `close_on_click` popup that the same click closed, because the map's listener
+  is added when the map boots, before any popup. A popup whose `on_close`
+  clears state could therefore undo what the map's `on_click` had just set. It
+  is now dispatched once the click has finished, as a layer's and a marker's
+  are.
+- A source or layer component whose `id` the style already used when the
+  component was added, on the first style or rendered later, was skipped
+  without a warning and then treated as the map's own: a change to it rewrote
+  the style's source or layer, and removing it removed them. It now warns once
+  and leaves the style's source or layer alone, as after a style change, and
+  the layers of such a source stay off the map instead of drawing the style's
+  data. A layer component whose `id` the style uses also kept its event
+  listeners, so its `on_click` and other events reported the style's layer of
+  that `id`. Its listeners now come off while the style holds the `id`, and go
+  back on once a style change leaves it free.
 
 ### Security
 
