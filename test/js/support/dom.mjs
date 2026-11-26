@@ -147,25 +147,69 @@ class Element {
   // Delivers a minimal event to this element's listeners, then bubbles it up
   // through its ancestors until a listener stops it. Only the bubble phase is
   // modelled: neither the runtime nor MapLibre's click handling captures.
+  //
+  // This is an event a script dispatches. Every listener runs before control
+  // comes back, so a microtask that a listener queues waits for all of them.
   dispatchEvent(event) {
-    let stopped = false;
-
-    const delivered = {
-      ...event,
-      target: this,
-      stopPropagation() {
-        stopped = true;
-      },
-    };
-
-    for (let node = this; node && !stopped; node = node.parentNode) {
-      delivered.currentTarget = node;
-
-      node.listeners
-        .filter((record) => record.name === delivered.type)
-        .forEach((record) => record.listener(delivered));
+    for (const _listener of propagate(this, event)) {
+      // Nothing runs between two listeners.
     }
   }
+
+  // The same event coming from the user's input instead, such as a real click.
+  // The browser dispatches it as a task of its own with no script on the
+  // stack, so each time a listener returns it runs every microtask queued so
+  // far. A timer is a task of its own and still waits for the whole dispatch.
+  // Resolves once the dispatch is over.
+  async dispatchUserEvent(event) {
+    for (const _listener of propagate(this, event)) {
+      await microtaskCheckpoint();
+    }
+  }
+}
+
+// Calls the listeners an event reaches, in order, yielding after each one. The
+// path is fixed before the first listener runs, as the DOM fixes it, so a
+// listener that moves or removes a node does not change where the event goes.
+function* propagate(target, event) {
+  let stopped = false;
+
+  const delivered = {
+    ...event,
+    target,
+    stopPropagation() {
+      stopped = true;
+    },
+  };
+
+  const path = [];
+
+  for (let node = target; node; node = node.parentNode) {
+    path.push(node);
+  }
+
+  for (const node of path) {
+    if (stopped) {
+      return;
+    }
+
+    delivered.currentTarget = node;
+
+    for (const record of node.listeners.filter(({ name }) => name === delivered.type)) {
+      record.listener(delivered);
+      yield record;
+    }
+  }
+}
+
+// Resolves once the microtask queue is empty, microtasks queued by microtasks
+// included, before any timer or immediate can run. Node runs a `nextTick`
+// callback queued from inside a microtask only after draining the whole queue,
+// and runs both before it returns to its event loop.
+async function microtaskCheckpoint() {
+  // Continues inside a microtask, so the tick below is queued from one.
+  await null;
+  await new Promise((resolve) => process.nextTick(resolve));
 }
 
 class Document {
@@ -312,4 +356,10 @@ export function installDOM() {
 // triggered has run.
 export function settle() {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+// Resolves in a task after every timer already set with no delay, which is
+// where the runtime reports a click on a marker.
+export function nextTask() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }

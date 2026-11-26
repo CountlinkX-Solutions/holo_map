@@ -170,6 +170,7 @@ defmodule HoloMap.Popup do
   # what `HoloMap.Marker`'s `popup_options` takes. The atom keys this component
   # knows go through its key table and boolean coercion. Any other key passes
   # through as given, so string keys remain the escape hatch they are elsewhere.
+  # A `nil` value is dropped whatever its key, as `HoloMap.Spec` drops it.
   @doc false
   @spec options(map()) :: map()
   def options(options) when is_map(options) do
@@ -180,6 +181,7 @@ defmodule HoloMap.Popup do
 
     Enum.reduce(options, converted, fn
       {key, _value}, acc when key in @option_names -> acc
+      {_key, nil}, acc -> acc
       {key, value}, acc -> Map.put(acc, key, value)
     end)
   end

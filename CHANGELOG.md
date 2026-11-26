@@ -30,6 +30,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so the documented `HoloMap.Popup` vocabulary (`close_button`, `max_width` and
   the rest) was ignored. Those keys are now converted, with the same boolean
   coercion `HoloMap.Popup` applies; string keys still pass through unchanged.
+  An option set to `nil` is left out whatever its key, as everywhere else.
 - Clicking a `HoloMap.Marker` that has `on_click` neither opened its
   `popup_html` popup nor closed popups with `close_on_click`. The runtime
   stopped the DOM click so the map's `on_click` would not also fire, but
@@ -37,7 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   marker popups and `close_on_click` from it. The click is now marked instead
   of stopped: MapLibre sees it, while the map's and layers' `on_click` still
   ignore a click on a marker that reports its own. The DOM click now bubbles
-  past the map like any other click on it.
+  past the map like any other click on it. The marker's `on_click` is
+  dispatched once the click has finished propagating, after the `on_close` of
+  any popup it closed, so a popup whose `on_close` clears the selection no
+  longer undoes the selection made by clicking another marker.
 
 ## [0.1.0] - 2026-08-23
 

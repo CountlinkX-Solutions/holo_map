@@ -100,6 +100,23 @@ defmodule HoloMap.OverlayTest do
              }
     end
 
+    test "drops popup_options whose value is nil, whatever their key" do
+      html =
+        render_def(HoloMap.Marker,
+          id: "m",
+          lng_lat: {0, 0},
+          popup_html: {:expr, "<b>Head office</b>"},
+          popup_options: %{
+            "offset" => nil,
+            :focusAfterOpen => nil,
+            max_width: nil,
+            close_button: false
+          }
+        )
+
+      assert spec_for(html, "m")["popup"]["options"] == %{"closeButton" => false}
+    end
+
     test "omits the popup key entirely when no html is given" do
       refute Map.has_key?(
                spec_for(render_def(HoloMap.Marker, id: "m", lng_lat: {0, 0}), "m"),

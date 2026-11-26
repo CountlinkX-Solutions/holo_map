@@ -16,6 +16,7 @@ import {
   logged,
   maplibre,
   mountMap,
+  nextTask,
   runtime,
   settle,
   unmountAll,
@@ -83,10 +84,17 @@ const MARKER_EVENTS = {
   dragend: { action: "dropped", target: "page" },
 };
 
+// Clicks `element` the way the user does, and waits for the task after the
+// click, which is where the runtime reports a click on a marker.
+async function userClick(element) {
+  await element.dispatchUserEvent({ type: "click" });
+  await nextTask();
+}
+
 // Clicks a marker and plays a drag on it, each the way MapLibre reports it: a
 // DOM click on the marker's element, drag events on the marker itself.
-function clickAndDrag(marker) {
-  marker.getElement().dispatchEvent({ type: "click" });
+async function clickAndDrag(marker) {
+  await userClick(marker.getElement());
   DRAG_EVENTS.forEach((name) => marker.fire(name));
 }
 
@@ -779,7 +787,7 @@ describe("events", () => {
       assert.equal(handle.map.markers.size, 1);
       assert.notEqual(after, before);
 
-      clickAndDrag(after);
+      await clickAndDrag(after);
 
       assert.deepEqual(
         dispatched.map(([action]) => action),
@@ -797,32 +805,70 @@ describe("events", () => {
     events: { click: { action: "office_clicked", target: "page" } },
   };
 
-  test("opens a marker's popup on click, as well as dispatching its on_click", () => {
+  test("opens a marker's popup on click, as well as dispatching its on_click", async () => {
     const { map } = mountMap({ defs: [OFFICE] });
     const [marker] = map.markers;
 
-    marker.getElement().dispatchEvent({ type: "click" });
+    await userClick(marker.getElement());
 
     assert.deepEqual(dispatched, [["office_clicked", "page", { lng_lat: [-70.66, 19.45] }]]);
     assert.ok(marker.getPopup().isOpen());
   });
 
-  test("closes a close_on_click popup when a marker with on_click is clicked", () => {
+  test("closes a close_on_click popup when a marker with on_click is clicked", async () => {
     const { map } = mountMap({ defs: [INFO, { ...OFFICE, spec: { lngLat: [-70.66, 19.45] } }] });
     const [popup] = map.popups;
     const [marker] = map.markers;
     dispatched.length = 0;
 
-    marker.getElement().dispatchEvent({ type: "click" });
+    await userClick(marker.getElement());
 
     assert.ok(!popup.isOpen());
     assert.deepEqual(
       dispatched.map(([action]) => action),
-      ["office_clicked", "closed"],
+      ["closed", "office_clicked"],
     );
   });
 
-  test("reports a marker click to the marker alone, not to the map or a layer under it", () => {
+  // The pattern HoloMap.Popup documents and the markers demo follows: a click
+  // on a marker selects it, and the popup showing the selection clears it when
+  // MapLibre closes it. Hologram runs actions in the order they are dispatched,
+  // so a click on another marker leaves that marker selected only if the close
+  // it causes is reported first.
+  test("reports a marker click after the close of the popup that click dismisses", async () => {
+    const place = (key, name, lngLat) => ({
+      kind: "marker",
+      key,
+      spec: { lngLat },
+      events: { click: { action: "select", target: "page", params: { name } } },
+    });
+
+    const { map } = mountMap({
+      defs: [
+        place("santiago", "Santiago", [-70.7, 19.45]),
+        place("punta-cana", "Punta Cana", [-68.37, 18.58]),
+        {
+          kind: "popup",
+          key: "details",
+          spec: { lngLat: [-70.7, 19.45] },
+          events: { close: { action: "clear", target: "page" } },
+          content: "<h3>Santiago</h3>",
+        },
+      ],
+    });
+    const [popup] = map.popups;
+    const [, puntaCana] = map.markers;
+
+    await userClick(puntaCana.getElement());
+
+    assert.ok(!popup.isOpen());
+    assert.deepEqual(dispatched, [
+      ["clear", "page", {}],
+      ["select", "page", { name: "Punta Cana", lng_lat: [-68.37, 18.58] }],
+    ]);
+  });
+
+  test("reports a marker click to the marker alone, not to the map or a layer under it", async () => {
     const handle = mountMap({
       events: { click: { action: "map_clicked", target: "page" } },
       defs: [
@@ -837,7 +883,7 @@ describe("events", () => {
     };
     const [marker] = handle.map.markers;
 
-    marker.getElement().dispatchEvent({ type: "click" });
+    await userClick(marker.getElement());
 
     assert.deepEqual(
       dispatched.map(([action]) => action),
