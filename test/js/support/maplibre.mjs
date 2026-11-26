@@ -769,6 +769,7 @@ export class Popup extends Evented {
     this.lngLat = null;
     this.html = null;
     this.map = null;
+    this.calls = [];
     // The classes on the popup's container, which exists only while the
     // popup is open.
     this.classes = null;
@@ -779,7 +780,11 @@ export class Popup extends Evented {
     return this;
   }
 
+  // MapLibre replaces the content node's children, which loses whatever the
+  // user had scrolled or selected in it, and with `focusAfterOpen` moves
+  // focus to its first focusable element.
   setHTML(html) {
+    this.calls.push(["setHTML", html]);
     this.html = html;
     return this;
   }

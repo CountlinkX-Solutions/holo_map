@@ -123,6 +123,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   kept the marker's popup from opening: MapLibre splits it on single spaces and
   the browser refuses the empty class name between two of them. The names now
   reach MapLibre separated by single spaces.
+- Every change to an open `HoloMap.Popup` rewrote its content, even a change to
+  `lng_lat` alone, so a popup following a moving feature lost its scroll
+  position and text selection on every move and, with `focus_after_open`, took
+  keyboard focus back. The content is now rewritten only when `html` or the
+  slot content changes what the popup shows.
 
 ## [0.1.0] - 2026-08-23
 

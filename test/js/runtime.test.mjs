@@ -699,6 +699,37 @@ describe("update", () => {
     assert.deepEqual(dispatched, []);
   });
 
+  // setHTML rebuilds the content, so a popup following a moving feature would
+  // lose its scroll position and take focus back on every move.
+  test("rewrites an open popup's content only when its content changes", async () => {
+    const handle = mountMap({
+      defs: [{ kind: "popup", key: "info", spec: { lngLat: [0, 0] }, content: "<p>One</p>" }],
+    });
+    const [popup] = handle.map.popups;
+    popup.calls.length = 0;
+
+    handle.setSpec("info", { lngLat: [1, 1], maxWidth: "320px" });
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    assert.deepEqual(popup.lngLat, [1, 1]);
+    assert.deepEqual(popup.calls, []);
+
+    handle.def("info").querySelector("[data-hm-content]").innerHTML = "<p>Two</p>";
+    await settle();
+    handle.setSpec("info", { lngLat: [1, 1], maxWidth: "320px", html: "<p>Three</p>" });
+    await settle();
+    // `html` wins over the slot, so a slot change leaves the content as it is.
+    handle.def("info").querySelector("[data-hm-content]").innerHTML = "<p>Four</p>";
+    await settle();
+
+    assert.deepEqual([...handle.map.popups], [popup]);
+    assert.deepEqual(popup.calls, [
+      ["setHTML", "<p>Two</p>"],
+      ["setHTML", "<p>Three</p>"],
+    ]);
+  });
+
   test("replaces an open popup whose close options change, reporting no close or open", async () => {
     const handle = mountMap({ defs: [INFO] });
     const [before] = handle.map.popups;
