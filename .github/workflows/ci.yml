@@ -47,6 +47,16 @@ jobs:
 
       - run: mix test
 
+      # ExUnit cannot reach runtime.mjs, so the reconciler has its own unit
+      # tests. They need nothing installed: the DOM and the maplibre-gl they
+      # run against are fakes in test/js/support.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Runtime unit tests
+        run: node --test "test/js/**/*.test.mjs"
+
       - name: Documentation builds
         run: mix docs
 

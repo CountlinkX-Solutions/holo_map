@@ -155,14 +155,28 @@ the container's `id` as well.
 
 ## Testing
 
-Two suites, because the library has two halves:
+Three suites, because the library has two halves and only one of them runs on
+the BEAM:
 
 - `mix test` covers everything that builds JSON. Component tests render through
   Hologram's own renderer and assert on the attributes each component emits.
+- `test/js/` unit-tests `runtime.mjs` with Node's own test runner, against a
+  fake `maplibre-gl` and a minimal DOM, both in `test/js/support/`. The tests
+  change definition attributes the way Hologram does and assert on what the
+  reconciler asked MapLibre for: which call a prop change becomes, what waits
+  for `style.load`, what a style swap declares again. They need Node.js 22.15 or
+  later and nothing else, so no npm install, browser or network:
+
+  ```console
+  $ node --test "test/js/**/*.test.mjs"
+  ```
+
 - `demo/test/browser/` drives a real MapLibre instance through Playwright and
   asserts on what MapLibre actually built, through `getLayer`,
   `getPaintProperty` and `getFilter`, reached via `window.HoloMap.map/1`.
 
 The split is forced: Hologram's JS interop is a no-op on the server, so no
-amount of ExUnit reaches `runtime.mjs`. Both navigation bugs above were found by
+amount of ExUnit reaches `runtime.mjs`. The unit tests run on every push to
+`main` and on every pull request; only the browser suite shows that MapLibre
+accepts what the reconciler hands it. Both navigation bugs above were found by
 the browser suite and are pinned there.

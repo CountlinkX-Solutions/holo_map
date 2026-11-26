@@ -131,9 +131,10 @@ Playwright. See the README there for what it covers and why.
 
 Two workflows, split by what they depend on.
 
-`ci.yml` runs on every push and pull request: compile with warnings as errors,
-formatter, Credo strict, tests, docs, Dialyzer, and a build of the demo with the
-Hologram compiler. The demo depends on the library by path, so that build
+`ci.yml` runs on every push to `main` and on every pull request: compile with
+warnings as errors, formatter, Credo strict, ExUnit, the runtime's unit tests
+under Node (see the Architecture guide), docs, Dialyzer, and a build of the demo
+with the Hologram compiler. The demo depends on the library by path, so that build
 catches a change that breaks a component's template or props, or that uses
 Elixir Hologram cannot run in the browser. It needs Hex and npm, and no browser
 or tile server.
