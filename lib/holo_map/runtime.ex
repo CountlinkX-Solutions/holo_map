@@ -33,6 +33,10 @@ defmodule HoloMap.Runtime do
   instead of building a second one, and calling it after a client-side
   navigation, where the same cid is rendered onto a fresh DOM node, disposes
   the stale instance first.
+
+  The map is built once its container and its own map definition are in the
+  page, which it waits for a frame at a time. If they have not appeared after
+  about a second (60 frames), it gives up with a console warning.
   """
   @spec boot(String.t()) :: :ok
   def boot(cid) do
@@ -43,8 +47,10 @@ defmodule HoloMap.Runtime do
   @doc """
   Calls `method` on the underlying `maplibregl.Map` with `args`.
 
-  Calls made before the style finishes loading are queued and replayed on
-  `load`, so a camera move issued from a mount action is not lost.
+  Calls made before the map has booted, or before its style finishes loading,
+  are queued and replayed in order once it has, so a camera move issued from a
+  mount action is not lost. Calls for a map that has not booted within five
+  seconds are dropped with a console warning.
 
   This is the general escape hatch. Prefer the named wrappers in `HoloMap.API`,
   which document their arguments and normalise option keys; reach for this only

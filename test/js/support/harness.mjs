@@ -10,7 +10,7 @@
 // with a dynamic import rather than a static one.
 
 import * as nodeModule from "node:module";
-import { installDOM, nextTask, settle } from "./dom.mjs";
+import { discardFrames, installDOM, nextFrame, nextTask, pendingFrames, settle } from "./dom.mjs";
 
 if (typeof nodeModule.registerHooks !== "function") {
   throw new Error(
@@ -35,7 +35,7 @@ const document = installDOM();
 
 export const runtime = await import("../../../lib/holo_map/js/runtime.mjs");
 export const maplibre = await import("maplibre-gl");
-export { nextTask, settle };
+export { nextFrame, nextTask, pendingFrames, settle };
 
 // Actions the runtime dispatched, as [action, target, params], newest last.
 export const dispatched = [];
@@ -61,9 +61,10 @@ const live = [];
 
 const DEFAULT_SPEC = { style: "https://tiles.test/style.json" };
 
-// Renders a map's container and definitions, boots it, and returns a handle
-// for driving it. `defs` lists child definitions in template order.
-export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
+// Renders a map's container and definitions, boots it unless `boot` is false,
+// and returns a handle for driving it. `defs` lists child definitions in
+// template order.
+export function mountMap({ spec = DEFAULT_SPEC, events, defs = [], boot = true } = {}) {
   mounted += 1;
   const cid = `map${mounted}`;
 
@@ -80,7 +81,9 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
   wrapper.appendChild(holder);
   document.body.appendChild(wrapper);
 
-  runtime.boot(cid);
+  if (boot) {
+    runtime.boot(cid);
+  }
 
   // The definition element for `key`. Definitions of different kinds can
   // share a key, as a source and its layer often do, so `kind` picks one.
@@ -95,7 +98,11 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
     cid,
     container,
     wrapper,
-    map: maplibre.maps[maplibre.maps.length - 1],
+    // The MapLibre map built on this container, once the map has booted.
+    get map() {
+      return maplibre.maps.findLast((map) => map.options.container === container);
+    },
+    boot: () => runtime.boot(cid),
     def,
     // Appends a definition, or renders it just before the one keyed `before`.
     add: (spec, before) =>
@@ -114,9 +121,10 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
 }
 
 // Tears down every map a test mounted, so the next test starts from an empty
-// document and an empty registry.
+// document and an empty registry, and with no frame still to run.
 export function unmountAll() {
   live.splice(0).forEach((handle) => handle.unmount());
+  discardFrames();
 }
 
 // One definition element, with an optional slot (`content`) the way Marker

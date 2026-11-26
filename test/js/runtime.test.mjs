@@ -9,14 +9,16 @@
 // runtime's own MutationObserver.
 
 import assert from "node:assert/strict";
-import { afterEach, describe, test } from "node:test";
+import { afterEach, describe, mock, test } from "node:test";
 
 import {
   dispatched,
   logged,
   maplibre,
   mountMap,
+  nextFrame,
   nextTask,
+  pendingFrames,
   runtime,
   settle,
   unmountAll,
@@ -149,6 +151,61 @@ describe("boot", () => {
 
     assert.equal(runtime.instance(cid), map);
   });
+
+  // Boot waits for what it needs a frame at a time, but not forever.
+  function runFrames(count) {
+    for (let frame = 0; frame < count; frame += 1) {
+      nextFrame();
+    }
+  }
+
+  test("stops waiting for a container that never appears, with one warning", () => {
+    const maps = maplibre.maps.length;
+
+    runtime.boot("absent");
+    runFrames(30);
+
+    assert.deepEqual(logged.warnings, []);
+    assert.equal(pendingFrames(), 1);
+
+    runFrames(100);
+
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /"absent"/);
+    assert.match(logged.warnings[0], /#hm--absent/);
+    assert.equal(pendingFrames(), 0);
+    assert.equal(maplibre.maps.length, maps);
+  });
+
+  test("builds the map only once its definition names it, with its options", () => {
+    const handle = mountMap({ boot: false });
+    const element = handle.def("map", "map");
+
+    // Mid-morph, the definition still belongs to the outgoing page's map.
+    element.setAttribute("data-hm-map", "outgoing");
+    handle.boot();
+    runFrames(3);
+
+    assert.equal(handle.map, undefined);
+
+    element.setAttribute("data-hm-map", handle.cid);
+    nextFrame();
+
+    assert.deepEqual(handle.map.options, { style: STYLE, container: handle.container });
+  });
+
+  test("stops waiting for a definition that never names the map, with one warning", () => {
+    const handle = mountMap({ boot: false });
+    handle.def("map", "map").setAttribute("data-hm-map", "outgoing");
+
+    handle.boot();
+    runFrames(100);
+
+    assert.equal(handle.map, undefined);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /map definition/);
+    assert.equal(pendingFrames(), 0);
+  });
 });
 
 describe("add", () => {
@@ -258,6 +315,56 @@ describe("add", () => {
 
     map.loadStyle();
     assert.deepEqual(map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+  });
+
+  // Hologram runs the actions components put in place from `init` in the
+  // order of their cids, so a page's own action can run before the boot of a
+  // map whose cid sorts after "page".
+  test("runs HoloMap.API calls made before the map booted, in order, once its style loads", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap({ defs: [SOURCE, CIRCLES], boot: false });
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+      runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+      runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 12]);
+      handle.boot();
+      handle.map.loadStyle();
+
+      assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+      assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 12);
+
+      // Booting ended the wait, so nothing is reported as dropped later.
+      mock.timers.tick(5000);
+      assert.deepEqual(logged.warnings, []);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  test("drops calls for a map that has not booted within five seconds, with a warning", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap({ boot: false });
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+      mock.timers.tick(4999);
+      assert.deepEqual(logged.warnings, []);
+
+      mock.timers.tick(1);
+      assert.equal(logged.warnings.length, 1);
+      assert.match(logged.warnings[0], new RegExp(`"${handle.cid}"`));
+      assert.match(logged.warnings[0], /jumpTo\(\)/);
+
+      handle.boot();
+      handle.map.loadStyle();
+
+      assert.deepEqual(handle.map.callsTo("jumpTo"), []);
+    } finally {
+      mock.timers.reset();
+    }
   });
 });
 
@@ -654,6 +761,178 @@ describe("layers waiting for their source", () => {
   });
 });
 
+// MapLibre's terrain draws from the source object it was given and throws for
+// a source it does not hold. Terrain follows its DEM source instead.
+describe("terrain and its source", () => {
+  const DEM = {
+    kind: "source",
+    key: "dem",
+    spec: { type: "raster-dem", tiles: ["https://dem.test/a/{z}/{x}/{y}.png"] },
+  };
+
+  const TERRAIN = { kind: "terrain", key: "terrain", spec: { source: "dem", exaggeration: 1.4 } };
+
+  // Whether the map's terrain draws from the source the map now holds.
+  function attached(map) {
+    return Boolean(map.terrain) && map.terrain.source === map.getSource("dem");
+  }
+
+  test("keeps terrain on its DEM source when a structural change rebuilds the source", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    const tiles = ["https://dem.test/b/{z}/{x}/{y}.png"];
+    handle.setSpec("dem", { ...DEM.spec, tiles }, "source");
+    await settle();
+
+    assert.deepEqual(handle.map.getSource("dem").spec.tiles, tiles);
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("keeps terrain turned on by the terrain control through a rebuild too", async () => {
+    const handle = mountMap({ defs: [DEM] });
+    handle.map.loadStyle();
+    // What MapLibre's TerrainControl does when the user turns terrain on.
+    handle.map.setTerrain({ source: "dem" });
+
+    handle.setSpec("dem", { ...DEM.spec, encoding: "terrarium" }, "source");
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), { source: "dem" });
+    assert.ok(attached(handle.map));
+  });
+
+  test("turns terrain off with a warning while its source is gone, and back on with it", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    handle.remove("dem", "source");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /terrain/);
+    assert.match(logged.warnings[0], /"dem"/);
+
+    handle.add(DEM);
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("takes terrain and its source off together without a warning", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    handle.remove("dem", "source");
+    handle.remove("terrain", "terrain");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+    assert.equal(handle.map.getSource("dem"), undefined);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  test("applies terrain written above its DEM source once the source is added", async () => {
+    const handle = mountMap({ defs: [TERRAIN, DEM] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+
+    // And again on every new style, in the same order.
+    handle.setSpec("map", { style: "https://tiles.test/dark.json" });
+    await settle();
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("applies terrain rendered without its DEM source once the source is rendered", async () => {
+    const handle = mountMap({ defs: [TERRAIN] });
+    handle.map.loadStyle();
+
+    assert.equal(handle.map.getTerrain(), null);
+
+    handle.add(DEM);
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("turns terrain off while it names a source that is not rendered", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    const other = { source: "dem-2", exaggeration: 1.4 };
+    handle.setSpec("terrain", other, "terrain");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+
+    handle.add({ ...DEM, key: "dem-2" });
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), other);
+    assert.equal(handle.map.terrain.source, handle.map.getSource("dem-2"));
+  });
+});
+
+// An image loads asynchronously, and its responses can come back in any order.
+describe("image loads", () => {
+  const icon = (name) => `https://tiles.test/${name}.png`;
+
+  // A map whose image requests wait for the test to finish them.
+  function mapWithImage(url) {
+    const handle = mountMap({ defs: [{ kind: "image", key: "pin", spec: { url } }] });
+    handle.map.heldImages = [];
+    handle.map.loadStyle();
+    return handle;
+  }
+
+  test("keeps the image of the URL requested last, whatever order the loads finish in", async () => {
+    const handle = mapWithImage(icon("a"));
+
+    handle.setSpec("pin", { url: icon("b") }, "image");
+    await settle();
+    handle.setSpec("pin", { url: icon("c") }, "image");
+    await settle();
+
+    const [a, b, c] = handle.map.heldImages;
+    a.finish();
+    await settle();
+    c.finish();
+    await settle();
+    b.finish();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("c") });
+  });
+
+  test("does not register an image whose definition was removed while it loaded", async () => {
+    const handle = mapWithImage(icon("a"));
+
+    handle.remove("pin", "image");
+    await settle();
+    handle.map.heldImages[0].finish();
+    await settle();
+
+    assert.equal(handle.map.hasImage("pin"), false);
+
+    // Rendered again, it loads for its new definition alone.
+    handle.add({ kind: "image", key: "pin", spec: { url: icon("b") } });
+    await settle();
+    handle.map.heldImages[1].finish();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("b") });
+  });
+});
+
 // Layers stack in template order, `before_id` aside, and controls stack in a
 // corner in declared order, however late each one reaches the map.
 describe("order", () => {
@@ -1007,6 +1286,126 @@ describe("style reload", () => {
     assert.equal(logged.warnings.length, 1);
     assert.match(logged.warnings[0], /the new style already defines a source called "cities"/);
   });
+
+  const DARK = "https://tiles.test/dark.json";
+
+  test("leaves an unchanged inline style alone when another map prop changes", async () => {
+    const inline = { version: 8, sources: {}, layers: [{ id: "background", type: "background" }] };
+    const handle = mountMap({ spec: { style: inline, zoom: 3 }, defs: [SOURCE, CIRCLES, LABELS] });
+    handle.map.loadStyle(inline);
+    handle.map.calls.length = 0;
+
+    handle.setSpec("map", { style: inline, zoom: 5 });
+    await settle();
+
+    // Set again, MapLibre would diff it against the map and take off every
+    // source and layer the style itself does not carry.
+    assert.deepEqual(handle.map.callsTo("setStyle"), []);
+    assert.deepEqual(sequence(handle.map, ["addSource", "addLayer"]), []);
+    assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 5 }, { holoMapReconciled: true }]]);
+    assert.deepEqual(handle.map.layerIds(), ["background", "cities-circles", "cities-labels"]);
+
+    const changed = { ...inline, layers: [{ id: "land", type: "background" }] };
+    handle.setSpec("map", { style: changed, zoom: 5 });
+    await settle();
+
+    assert.deepEqual(handle.map.callsTo("setStyle"), [[changed, { diff: false }]]);
+  });
+
+  test("declares terrain and sky again with the rest, warning about nothing it owns", async () => {
+    const terrain = { source: "dem", exaggeration: 1.4 };
+    const sky = { "sky-color": "#199EF3" };
+    const handle = mountMap({
+      defs: [
+        SOURCE,
+        CIRCLES,
+        LABELS,
+        { kind: "source", key: "dem", spec: { type: "raster-dem", tiles: ["https://dem.test"] } },
+        { kind: "terrain", key: "terrain", spec: terrain },
+        { kind: "sky", key: "sky", spec: sky },
+      ],
+    });
+    handle.map.loadStyle();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.calls.length = 0;
+    handle.map.loadStyle({ layers: [{ id: "background", type: "background" }] });
+
+    assert.deepEqual(handle.map.layerIds(), ["background", "cities-circles", "cities-labels"]);
+    assert.ok(handle.map.getSource("cities"));
+    assert.ok(handle.map.getSource("dem"));
+    assert.deepEqual(handle.map.callsTo("setTerrain"), [[terrain]]);
+    assert.deepEqual(handle.map.callsTo("setSky"), [[sky]]);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  test("holds definitions and HoloMap.API calls that come while a new style loads", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.add({ kind: "layer", key: "cities-halo", spec: { type: "circle", source: "cities" } });
+    await settle();
+    runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels", "cities-halo"]);
+    assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("swaps the style for HoloMap.API.set_style/2 the same way", () => {
+    const handle = loadedCitiesMap();
+
+    runtime.invoke(handle.cid, "setStyle", [DARK]);
+    runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+    handle.map.loadStyle();
+
+    // Never a diff, so `style.load` always follows and nothing is lost.
+    assert.deepEqual(handle.map.callsTo("setStyle"), [[DARK, { diff: false }]]);
+    assert.deepEqual(handle.map.layerIds(), ["cities-circles", "cities-labels"]);
+    assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("runs the calls queued after a set_style/2 on the style it asked for", () => {
+    const { cid, map } = mountMap({ defs: [SOURCE, CIRCLES, LABELS] });
+
+    runtime.invoke(cid, "setStyle", [DARK]);
+    runtime.invoke(cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+    map.loadStyle();
+
+    assert.deepEqual(map.callsTo("setPaintProperty"), []);
+
+    map.loadStyle();
+
+    assert.deepEqual(map.layerIds(), ["cities-circles", "cities-labels"]);
+    assert.equal(map.getLayer("cities-circles").paint["circle-radius"], 9);
+  });
+
+  test("leaves the layers of a source the new style took over off the map, naming them", async () => {
+    const handle = loadedCitiesMap();
+
+    handle.setSpec("map", { style: DARK });
+    await settle();
+    handle.map.calls.length = 0;
+    // A basemap's vector source refuses a layer with no "source-layer".
+    handle.map.loadStyle({
+      sources: { cities: { type: "vector", url: "https://tiles.test/cities.json" } },
+    });
+
+    assert.deepEqual(handle.map.callsTo("addLayer"), []);
+    assert.deepEqual(handle.map.layerIds(), []);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /the new style already defines a source called "cities"/);
+    assert.match(logged.warnings[0], /"cities-circles", "cities-labels"/);
+
+    // Nor does a later change to one of them put it on the style's source.
+    handle.setSpec("cities-circles", { ...CIRCLES.spec, paint: { "circle-radius": 6 } });
+    await settle();
+
+    assert.deepEqual(handle.map.layerIds(), []);
+  });
 });
 
 describe("events", () => {
@@ -1042,6 +1441,49 @@ describe("events", () => {
 
     assert.equal(handle.map.callsTo("jumpTo").length, 1);
     assert.deepEqual(dispatched, []);
+  });
+
+  test("gives on_error what failed, as plain values, next to the camera", () => {
+    const handle = mountMap({ events: { error: { action: "failed", target: "page" } } });
+    const camera = {
+      center: [0, 0],
+      zoom: 0,
+      bearing: 0,
+      pitch: 0,
+      bounds: [
+        [-10, -5],
+        [10, 5],
+      ],
+    };
+
+    // A tile request that failed, as MapLibre reports it: an AJAXError, with
+    // the source's id and the tile, which refers back to its own source.
+    const url = "https://dem.test/1/0/0.png";
+    const error = Object.assign(new Error(`AJAXError: Not Found (404): ${url}`), {
+      status: 404,
+      statusText: "Not Found",
+      url,
+      body: new Blob([]),
+    });
+    const tile = { tileID: { z: 1, x: 0, y: 0 } };
+    tile.self = tile;
+
+    handle.map.fire("error", { type: "error", error, sourceId: "dem", tile });
+    // A style that failed validation reports a message alone.
+    handle.map.fire("error", { type: "error", error: new Error("layers.x: unknown type") });
+
+    assert.deepEqual(dispatched, [
+      [
+        "failed",
+        "page",
+        {
+          ...camera,
+          error: { message: error.message, status: 404, url, source_id: "dem" },
+        },
+      ],
+      ["failed", "page", { ...camera, error: { message: "layers.x: unknown type" } }],
+    ]);
+    assert.deepEqual(JSON.parse(JSON.stringify(dispatched)), dispatched);
   });
 
   test("binds layer events to their layer and unbinds them with it", async () => {

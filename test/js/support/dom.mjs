@@ -382,6 +382,24 @@ function compile(selector) {
   throw new Error(`the test DOM does not support the selector ${JSON.stringify(selector)}`);
 }
 
+// Animation frames run when a test asks for one with nextFrame(), as a browser
+// runs them before it paints: every callback requested so far, once, and one
+// requested from inside a frame in the frame after.
+const frameCallbacks = [];
+
+export function nextFrame() {
+  frameCallbacks.splice(0).forEach((callback) => callback(performance.now()));
+}
+
+// How many callbacks wait for the next frame.
+export function pendingFrames() {
+  return frameCallbacks.length;
+}
+
+export function discardFrames() {
+  frameCallbacks.length = 0;
+}
+
 // Installs the document and the browser globals the runtime reads.
 export function installDOM() {
   const document = new Document();
@@ -389,7 +407,7 @@ export function installDOM() {
   globalThis.document = document;
   globalThis.window = globalThis;
   globalThis.MutationObserver = MutationObserver;
-  globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
+  globalThis.requestAnimationFrame = (callback) => frameCallbacks.push(callback);
 
   return document;
 }

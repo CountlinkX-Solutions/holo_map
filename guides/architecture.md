@@ -107,6 +107,11 @@ Not on `load`. MapLibre's `load` event also waits for the first complete render,
 which never arrives if a tile request hangs; gating on it produced a map that
 rendered its background and stayed permanently empty.
 
+A style change returns the map to that state. The runtime asks MapLibre for a
+new style rather than a diff against the current one, so a `style.load` always
+follows; style-scoped work and `HoloMap.API` calls made meanwhile wait for it
+and run once everything the runtime owns has been declared again.
+
 Markers, popups and controls wait for nothing. They attach to the map object,
 not to the style, and queueing them would mean controls that never appear when a
 tile server is slow.
@@ -125,7 +130,7 @@ Not every prop change costs the same. In rough order:
 | An image source's `url` or `coordinates` | `updateImage`. Free |
 | The map's `center` / `zoom` / `bearing` / `pitch` | `jumpTo`. Free |
 | A layer's `type`, `source` or `source_layer` | Remove and re-add the layer, at its place |
-| Any other source key | Detach the dependent layers, rebuild the source, re-add them at their places |
+| Any other source key | Detach the dependent layers and terrain, rebuild the source, re-add the layers at their places and the terrain |
 | The map's `style` | Everything is discarded and re-declared on the next `style.load` |
 | A control's props | Remove and re-add the control, at its place in its corner |
 

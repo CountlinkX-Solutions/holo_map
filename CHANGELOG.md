@@ -66,6 +66,49 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names is on the map. A control rendered conditionally, or replaced by a prop
   change, went to the far end of its corner; it now goes back to its declared
   place, and the controls around it are left as they are.
+- An inline `style` map was set again on every change to any `HoloMap.Map`
+  prop, such as `zoom`, and MapLibre's diff then took every source and layer
+  off the map and back on. It is now compared by value. A style change, from
+  the prop or `HoloMap.API.set_style/2`, now always builds the new style from
+  scratch instead of diffing it, so it always ends in the re-declaration of the
+  map's sources, layers, images, terrain and sky; work and `HoloMap.API` calls
+  issued while the new style loads wait for it instead of reaching the old
+  style or failing with "Style is not done loading". When the new style
+  already defines a source of the same `id`, the layers drawing from it are no
+  longer added to the style's source, where a vector source refused each one
+  with an error; the warning now names them. A style change also no longer
+  warns that the new style defines each of the map's own layers.
+- Terrain stayed bound to its `HoloMap.Source.RasterDEM` after a change to the
+  source's `tiles`, `url`, `encoding` or other structural keys rebuilt it, and
+  after the source was removed, so it went on drawing from a source that was no
+  longer on the map. It now comes off before the source and goes back on the
+  rebuilt one, whether `HoloMap.Terrain` or the terrain control turned it on.
+  Removing the source turns terrain off with a warning until the source is
+  rendered again. `HoloMap.Terrain` declared above its source, or rendered
+  while the source was not, made MapLibre throw "cannot load terrain" and was
+  never applied; it now waits for its source, as layers do.
+- A `HoloMap.API` call made before its map had booted was dropped with a
+  console warning. Hologram runs the actions scheduled from `init` in the order
+  of the components' cids, so the documented pattern of moving the camera from
+  a page's `init` action lost the call whenever the map's cid sorts after
+  `"page"`. Such calls are now queued and run in order once the map's style has
+  loaded; calls for a map that has not booted within five seconds are dropped
+  with a warning.
+- `HoloMap.Map`'s `on_error` received the camera but not the error. Its payload
+  now also has an `error` map with the `message`, plus the HTTP `status` and
+  `url` of a failed request and the `source_id` of a source's error when
+  MapLibre reports them. Only plain values cross into Elixir.
+- `HoloMap.Image` applied whichever image load finished last: a slow response
+  for an earlier `url` replaced the image of a later one, and a response for an
+  image removed while it loaded registered it again, with no component left to
+  remove it. A load is now applied only if it is the latest one for an image
+  that is still declared.
+- Booting a map retried every animation frame for as long as its container was
+  missing, for the rest of the page's life if the page moved on first, and
+  built the map with no options, so with no style ever, when the map definition
+  still named another map during a navigation. Boot now waits a frame at a
+  time for both the container and a definition that names the map, and gives
+  up with a warning after 60 frames.
 
 ## [0.1.0] - 2026-08-23
 

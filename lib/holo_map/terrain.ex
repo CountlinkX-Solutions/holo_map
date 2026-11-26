@@ -9,6 +9,11 @@ defmodule HoloMap.Terrain do
   none. Declaring the component turns it on; removing it from the template
   turns it off and the map flattens back out.
 
+  Like a layer, terrain waits for its source: declared above the
+  `HoloMap.Source.RasterDEM` it names, or while that source is not rendered, it
+  turns on once the source is. Removing the source turns terrain off, with a
+  console warning, until the source is rendered again.
+
   ## Props
 
   | Prop | Type | Notes |
