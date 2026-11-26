@@ -484,6 +484,26 @@ describe("update", () => {
     ]);
   });
 
+  // MapLibre lifts its default pin so that its tip is on the coordinate.
+  test("gives a marker whose offset is removed the offset MapLibre gave it", async () => {
+    const offset = [4, 8];
+    const handle = mountMap({
+      defs: [
+        { kind: "marker", key: "pin", spec: { lngLat: [0, 0], offset } },
+        { kind: "marker", key: "badge", spec: { lngLat: [1, 1], offset }, content: "<b>3</b>" },
+      ],
+    });
+    const [pin, badge] = handle.map.markers;
+
+    handle.setSpec("pin", { lngLat: [0, 0] });
+    handle.setSpec("badge", { lngLat: [1, 1] });
+    await settle();
+
+    assert.deepEqual([...handle.map.markers], [pin, badge]);
+    assert.deepEqual(pin.offset, [0, -14]);
+    assert.deepEqual(badge.offset, [0, 0]);
+  });
+
   test("replaces a marker whose colour changes", async () => {
     const handle = mountMap({
       defs: [{ kind: "marker", key: "pin", spec: { lngLat: [0, 0], color: "#e11d48" } }],

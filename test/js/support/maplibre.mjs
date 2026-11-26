@@ -626,6 +626,9 @@ export class Marker extends Evented {
     this.rotationAlignment = options.rotationAlignment || "auto";
     this.pitchAlignment = pitchAlignmentFor(options.pitchAlignment, this.rotationAlignment);
     this.subpixelPositioning = options.subpixelPositioning || false;
+    // MapLibre lifts its default pin so that the tip, not the middle, is on
+    // the coordinate. An element of the marker's own is not moved.
+    this.offset = options.offset || (options.element ? [0, 0] : [0, -14]);
   }
 
   setLngLat(lngLat) {
@@ -712,6 +715,7 @@ export class Marker extends Evented {
 
   setOffset(offset) {
     this.calls.push(["setOffset", offset]);
+    this.offset = offset;
     return this;
   }
 

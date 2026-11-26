@@ -114,6 +114,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `anchor` or `click_tolerance` replaced the MapLibre marker, so a marker whose
   content follows state closed its own popup on every change. It is now opened
   again on the new marker; a popup the user had not opened stays closed.
+- Removing `offset` from a `HoloMap.Marker` drawn as MapLibre's default pin set
+  its offset to `[0, 0]`, which moved the tip of the pin off its coordinate.
+  It now goes back to MapLibre's own offset for the pin, `[0, -14]`; a marker
+  with slot content still goes back to `[0, 0]`.
 
 ## [0.1.0] - 2026-08-23
 
