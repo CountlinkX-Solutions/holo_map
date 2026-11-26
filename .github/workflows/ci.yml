@@ -19,14 +19,14 @@ jobs:
     name: Library
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             deps
@@ -54,14 +54,14 @@ jobs:
     name: Dialyzer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             deps
@@ -71,7 +71,7 @@ jobs:
 
       # Building the PLT from scratch costs more than every other check
       # combined, and it only changes when the toolchain or the deps do.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: priv/plts
           key: plt-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
@@ -91,7 +91,7 @@ jobs:
     # browser, surfaces. Nothing here loads a page: the runtime's behaviour in
     # a browser is the Browser suites workflow's job.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: erlef/setup-beam@v1
         with:
@@ -100,11 +100,11 @@ jobs:
 
       # The Hologram compiler npm-installs its own assets and bundles with
       # esbuild, and the demo's maplibre-gl comes from npm too.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             demo/deps
