@@ -35,7 +35,7 @@ defmodule HoloMap.Marker do
   | `opacity` | string | CSS opacity |
   | `class_name` | string | Extra classes on the marker element |
   | `popup_html` | string | Attach a popup that opens when the marker is clicked |
-  | `popup_options` | map | Options for that popup, in `HoloMap.Popup`'s vocabulary |
+  | `popup_options` | map | Options for that popup, in `HoloMap.Popup`'s vocabulary. String keys reach MapLibre unchanged |
 
 
   > #### Raw HTML must arrive through an expression {: .info}
@@ -172,6 +172,6 @@ defmodule HoloMap.Marker do
   defp popup(%{popup_html: nil}), do: nil
 
   defp popup(props) do
-    %{"html" => props.popup_html, "options" => props.popup_options || %{}}
+    %{"html" => props.popup_html, "options" => HoloMap.Popup.options(props.popup_options || %{})}
   end
 end

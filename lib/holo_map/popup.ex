@@ -91,7 +91,7 @@ defmodule HoloMap.Popup do
 
   use HoloMap.Def
 
-  @keys [
+  @options [
     close_button: "closeButton",
     close_on_click: "closeOnClick",
     close_on_move: "closeOnMove",
@@ -100,8 +100,19 @@ defmodule HoloMap.Popup do
     class_name: "className",
     max_width: "maxWidth",
     focus_after_open: "focusAfterOpen",
-    subpixel_positioning: "subpixelPositioning",
-    html: "html"
+    subpixel_positioning: "subpixelPositioning"
+  ]
+
+  @option_names Keyword.keys(@options)
+
+  @keys @options ++ [html: "html"]
+
+  @booleans [
+    :close_button,
+    :close_on_click,
+    :close_on_move,
+    :focus_after_open,
+    :subpixel_positioning
   ]
 
   prop :id, :string, required: true
@@ -149,15 +160,29 @@ defmodule HoloMap.Popup do
   @spec build(map()) :: String.t()
   def build(props) do
     props
-    |> HoloMap.Spec.booleans([
-      :close_button,
-      :close_on_click,
-      :close_on_move,
-      :focus_after_open,
-      :subpixel_positioning
-    ])
+    |> HoloMap.Spec.booleans(@booleans)
     |> HoloMap.Spec.take(@keys)
     |> Map.put("lngLat", HoloMap.Spec.lng_lat(props.lng_lat))
     |> HoloMap.Def.spec()
+  end
+
+  # MapLibre popup options from a map in this component's vocabulary, which is
+  # what `HoloMap.Marker`'s `popup_options` takes. The atom keys this component
+  # knows go through its key table and boolean coercion. Any other key passes
+  # through as given, so string keys remain the escape hatch they are elsewhere.
+  # A `nil` value is dropped whatever its key, as `HoloMap.Spec` drops it.
+  @doc false
+  @spec options(map()) :: map()
+  def options(options) when is_map(options) do
+    converted =
+      options
+      |> HoloMap.Spec.booleans(@booleans)
+      |> HoloMap.Spec.take(@options)
+
+    Enum.reduce(options, converted, fn
+      {key, _value}, acc when key in @option_names -> acc
+      {_key, nil}, acc -> acc
+      {key, value}, acc -> Map.put(acc, key, value)
+    end)
   end
 end

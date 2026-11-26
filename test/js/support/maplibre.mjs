@@ -2,12 +2,15 @@
 //
 // Every class records the calls the runtime makes and keeps just the state
 // those calls imply (the sources, the layer stack, controls, markers and
-// popups on the map), so a test can assert both on what was asked and on what
-// a real map would now hold. Nothing here renders, fetches or parses.
+// popups on the map, a marker's popup and alignment, a popup's options and
+// classes), so a test can assert both on what was asked and on what a real
+// map would now hold. Nothing here renders, fetches or parses.
 //
 // MapLibre's events are driven by hand: `map.loadStyle()` plays a style
 // arriving, which wipes the style-scoped state and emits `style.load`, and
-// `fire()` emits any other event.
+// `fire()` emits any other event. Clicks can also go through the DOM: one
+// dispatched on a marker's element bubbles to the map's canvas container,
+// which turns it into the map's `click` as MapLibre does.
 
 // Every Map constructed, oldest first.
 export const maps = [];
@@ -66,7 +69,43 @@ class FakeMap extends Evented {
     this.popups = new Set();
     this.camera = { center: { lng: 0, lat: 0 }, zoom: 0, bearing: 0, pitch: 0 };
     this.removed = false;
+
+    // Features a test places under the pointer, by layer id, for the layer
+    // events a click delegates.
+    this.featuresUnderPointer = {};
+
+    // MapLibre builds this inside the container and puts marker elements in
+    // it. Its own `click` comes from DOM clicks that bubble up to it, through
+    // a listener in the bubble phase.
+    this.canvasContainer = document.createElement("div");
+    this.canvasContainer.className = "maplibregl-canvas-container";
+    this.canvasContainer.addEventListener("click", (event) => this.click(event));
+    options.container.appendChild(this.canvasContainer);
+
     maps.push(this);
+  }
+
+  getCanvasContainer() {
+    return this.canvasContainer;
+  }
+
+  // The map `click` MapLibre fires for a DOM click that reached the canvas
+  // container, then the layer `click`s it delegates from that same event for
+  // the features under the pointer. Nothing is projected: every click lands
+  // on the camera's centre.
+  click(originalEvent) {
+    const event = {
+      type: "click",
+      originalEvent,
+      point: { x: originalEvent.clientX ?? 0, y: originalEvent.clientY ?? 0 },
+      lngLat: this.camera.center,
+    };
+
+    this.fire("click", event);
+
+    Object.entries(this.featuresUnderPointer).forEach(([layer, features]) => {
+      this.fire("click", { ...event, features }, layer);
+    });
   }
 
   record(name, ...args) {
@@ -305,6 +344,22 @@ class FakeMap extends Evented {
 
 export { FakeMap as Map };
 
+// MapLibre resolves an unset or "auto" pitch alignment to the rotation
+// alignment, both when it builds a marker and in setPitchAlignment.
+function pitchAlignmentFor(alignment, rotationAlignment) {
+  return alignment && alignment !== "auto" ? alignment : rotationAlignment;
+}
+
+// A class name as DOMTokenList takes it: MapLibre hands names straight to
+// classList, which throws on an empty one or one holding whitespace.
+function classToken(name) {
+  if (name === "" || /\s/.test(name)) {
+    throw new Error(`classList refuses the class name ${JSON.stringify(name)}`);
+  }
+
+  return name;
+}
+
 export class Marker extends Evented {
   constructor(options = {}) {
     super();
@@ -314,6 +369,13 @@ export class Marker extends Evented {
     this.map = null;
     this.popup = null;
     this.calls = [];
+
+    // What the setters below change, starting where MapLibre's constructor
+    // leaves it.
+    this.opacity = options.opacity === undefined ? "1" : String(options.opacity);
+    this.rotationAlignment = options.rotationAlignment || "auto";
+    this.pitchAlignment = pitchAlignmentFor(options.pitchAlignment, this.rotationAlignment);
+    this.subpixelPositioning = options.subpixelPositioning || false;
   }
 
   setLngLat(lngLat) {
@@ -330,23 +392,71 @@ export class Marker extends Evented {
     return this.element;
   }
 
+  // MapLibre puts the element in the canvas container, and toggles the
+  // marker's popup from the map's own `click`, not from the element's.
   addTo(map) {
     this.map = map;
     map.markers.add(this);
+    map.getCanvasContainer().appendChild(this.element);
+    map.on("click", this.onMapClick);
     return this;
   }
 
+  // Takes the marker's element and popup off the map with it.
   remove() {
     if (this.map) {
+      this.map.off("click", this.onMapClick);
       this.map.markers.delete(this);
     }
 
     this.map = null;
+    this.element.remove();
+
+    if (this.popup) {
+      this.popup.remove();
+    }
+
     return this;
   }
 
+  // MapLibre's _onMapClick: a map click that started on this marker's element
+  // toggles its popup.
+  onMapClick = (event) => {
+    if (this.popup && this.element.contains(event.originalEvent.target)) {
+      this.togglePopup();
+    }
+  };
+
+  // Replacing or clearing the popup closes the one attached before.
   setPopup(popup) {
-    this.popup = popup;
+    if (this.popup) {
+      this.popup.remove();
+      this.popup = null;
+    }
+
+    if (popup) {
+      this.popup = popup;
+    }
+
+    return this;
+  }
+
+  getPopup() {
+    return this.popup;
+  }
+
+  togglePopup() {
+    if (!this.popup) {
+      return this;
+    }
+
+    if (this.popup.isOpen()) {
+      this.popup.remove();
+    } else {
+      this.popup.setLngLat(this.lngLat);
+      this.popup.addTo(this.map);
+    }
+
     return this;
   }
 
@@ -364,15 +474,45 @@ export class Marker extends Evented {
     this.calls.push(["setRotation", rotation]);
     return this;
   }
+
+  // Called with no opacity, MapLibre resets it to its default.
+  setOpacity(opacity) {
+    this.calls.push(["setOpacity", opacity]);
+    this.opacity = opacity === undefined ? "1" : String(opacity);
+    return this;
+  }
+
+  setRotationAlignment(alignment) {
+    this.calls.push(["setRotationAlignment", alignment]);
+    this.rotationAlignment = alignment || "auto";
+    return this;
+  }
+
+  setPitchAlignment(alignment) {
+    this.calls.push(["setPitchAlignment", alignment]);
+    this.pitchAlignment = pitchAlignmentFor(alignment, this.rotationAlignment);
+    return this;
+  }
+
+  setSubpixelPositioning(value) {
+    this.calls.push(["setSubpixelPositioning", value]);
+    this.subpixelPositioning = value;
+    return this;
+  }
 }
 
 export class Popup extends Evented {
   constructor(options = {}) {
     super();
-    this.options = options;
+    // MapLibre copies the options it is given, and its setters write to the
+    // copy.
+    this.options = { ...options };
     this.lngLat = null;
     this.html = null;
     this.map = null;
+    // The classes on the popup's container, which exists only while the
+    // popup is open.
+    this.classes = null;
   }
 
   setLngLat(lngLat) {
@@ -385,9 +525,27 @@ export class Popup extends Evented {
     return this;
   }
 
+  // MapLibre fires `open` at the very end of addTo, synchronously, so a
+  // listener attached once addTo has returned never hears it.
   addTo(map) {
+    if (this.map) {
+      this.remove();
+    }
+
     this.map = map;
     map.popups.add(this);
+
+    // Of the ways MapLibre closes a popup on its own, only `closeOnClick` (on
+    // unless the options turn it off) is modelled.
+    if (!("closeOnClick" in this.options) || this.options.closeOnClick) {
+      map.on("click", this.onClose);
+    }
+
+    // MapLibre splits `className` on single spaces when it builds the
+    // container, so two spaces in a row reach classList as an empty name.
+    const names = this.options.className ? this.options.className.split(" ") : [];
+    this.classes = new Set(names.map(classToken));
+    this.fire("open");
     return this;
   }
 
@@ -395,12 +553,52 @@ export class Popup extends Evented {
     return this.map !== null;
   }
 
+  // `close` fires only when the popup was on a map.
   remove() {
     if (this.map) {
+      this.map.off("click", this.onClose);
       this.map.popups.delete(this);
+      this.map = null;
+      this.classes = null;
+      this.fire("close");
     }
 
-    this.map = null;
+    return this;
+  }
+
+  onClose = () => {
+    this.remove();
+  };
+
+  setMaxWidth(maxWidth) {
+    this.options.maxWidth = maxWidth;
+    return this;
+  }
+
+  setOffset(offset) {
+    this.options.offset = offset;
+    return this;
+  }
+
+  // Returns nothing in MapLibre, unlike the other setters.
+  setSubpixelPositioning(value) {
+    this.options.subpixelPositioning = value;
+  }
+
+  // Both work on the container, so they do nothing while the popup is closed.
+  addClassName(name) {
+    if (this.classes) {
+      this.classes.add(classToken(name));
+    }
+
+    return this;
+  }
+
+  removeClassName(name) {
+    if (this.classes) {
+      this.classes.delete(classToken(name));
+    }
+
     return this;
   }
 }

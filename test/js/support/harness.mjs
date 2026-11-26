@@ -10,7 +10,7 @@
 // with a dynamic import rather than a static one.
 
 import * as nodeModule from "node:module";
-import { installDOM, settle } from "./dom.mjs";
+import { installDOM, nextTask, settle } from "./dom.mjs";
 
 if (typeof nodeModule.registerHooks !== "function") {
   throw new Error(
@@ -35,7 +35,7 @@ const document = installDOM();
 
 export const runtime = await import("../../../lib/holo_map/js/runtime.mjs");
 export const maplibre = await import("maplibre-gl");
-export { settle };
+export { nextTask, settle };
 
 // Actions the runtime dispatched, as [action, target, params], newest last.
 export const dispatched = [];

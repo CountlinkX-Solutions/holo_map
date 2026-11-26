@@ -54,6 +54,69 @@ defmodule HoloMap.OverlayTest do
              }
     end
 
+    test "converts popup_options from HoloMap.Popup's vocabulary to MapLibre's" do
+      html =
+        render_def(HoloMap.Marker,
+          id: "m",
+          lng_lat: {0, 0},
+          popup_html: {:expr, "<b>Head office</b>"},
+          popup_options: %{
+            close_button: false,
+            close_on_click: "",
+            max_width: "320px",
+            class_name: "office",
+            offset: 24
+          }
+        )
+
+      assert spec_for(html, "m")["popup"]["options"] == %{
+               "closeButton" => false,
+               "closeOnClick" => true,
+               "maxWidth" => "320px",
+               "className" => "office",
+               "offset" => 24
+             }
+    end
+
+    test "passes popup_options string keys, and keys it does not know, through as given" do
+      html =
+        render_def(HoloMap.Marker,
+          id: "m",
+          lng_lat: {0, 0},
+          popup_html: {:expr, "<b>Head office</b>"},
+          popup_options: %{
+            "padding" => %{"top" => 40},
+            "closeOnMove" => "",
+            :focusAfterOpen => false,
+            close_button: false
+          }
+        )
+
+      assert spec_for(html, "m")["popup"]["options"] == %{
+               "padding" => %{"top" => 40},
+               "closeOnMove" => "",
+               "focusAfterOpen" => false,
+               "closeButton" => false
+             }
+    end
+
+    test "drops popup_options whose value is nil, whatever their key" do
+      html =
+        render_def(HoloMap.Marker,
+          id: "m",
+          lng_lat: {0, 0},
+          popup_html: {:expr, "<b>Head office</b>"},
+          popup_options: %{
+            "offset" => nil,
+            :focusAfterOpen => nil,
+            max_width: nil,
+            close_button: false
+          }
+        )
+
+      assert spec_for(html, "m")["popup"]["options"] == %{"closeButton" => false}
+    end
+
     test "omits the popup key entirely when no html is given" do
       refute Map.has_key?(
                spec_for(render_def(HoloMap.Marker, id: "m", lng_lat: {0, 0}), "m"),
