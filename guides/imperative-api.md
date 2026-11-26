@@ -46,8 +46,10 @@ end
 > end
 > ```
 
-Calls made before the style finishes loading are queued and replayed, so an
-action scheduled from `init` is not lost.
+Calls made before the map has booted, or before its style finishes loading, are
+queued and replayed in order, so an action scheduled from `init` is not lost,
+even when it runs before the map's own boot action. Calls for a map that has not
+booted within five seconds are dropped with a console warning.
 
 ## Camera
 

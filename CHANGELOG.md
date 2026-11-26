@@ -87,6 +87,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   rendered again. `HoloMap.Terrain` declared above its source, or rendered
   while the source was not, made MapLibre throw "cannot load terrain" and was
   never applied; it now waits for its source, as layers do.
+- A `HoloMap.API` call made before its map had booted was dropped with a
+  console warning. Hologram runs the actions scheduled from `init` in the order
+  of the components' cids, so the documented pattern of moving the camera from
+  a page's `init` action lost the call whenever the map's cid sorts after
+  `"page"`. Such calls are now queued and run in order once the map's style has
+  loaded; calls for a map that has not booted within five seconds are dropped
+  with a warning.
 
 ## [0.1.0] - 2026-08-23
 

@@ -9,7 +9,7 @@
 // runtime's own MutationObserver.
 
 import assert from "node:assert/strict";
-import { afterEach, describe, test } from "node:test";
+import { afterEach, describe, mock, test } from "node:test";
 
 import {
   dispatched,
@@ -258,6 +258,56 @@ describe("add", () => {
 
     map.loadStyle();
     assert.deepEqual(map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+  });
+
+  // Hologram runs the actions components put in place from `init` in the
+  // order of their cids, so a page's own action can run before the boot of a
+  // map whose cid sorts after "page".
+  test("runs HoloMap.API calls made before the map booted, in order, once its style loads", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap({ defs: [SOURCE, CIRCLES], boot: false });
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+      runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 9]);
+      runtime.invoke(handle.cid, "setPaintProperty", ["cities-circles", "circle-radius", 12]);
+      handle.boot();
+      handle.map.loadStyle();
+
+      assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+      assert.equal(handle.map.getLayer("cities-circles").paint["circle-radius"], 12);
+
+      // Booting ended the wait, so nothing is reported as dropped later.
+      mock.timers.tick(5000);
+      assert.deepEqual(logged.warnings, []);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  test("drops calls for a map that has not booted within five seconds, with a warning", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap({ boot: false });
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+      mock.timers.tick(4999);
+      assert.deepEqual(logged.warnings, []);
+
+      mock.timers.tick(1);
+      assert.equal(logged.warnings.length, 1);
+      assert.match(logged.warnings[0], new RegExp(`"${handle.cid}"`));
+      assert.match(logged.warnings[0], /jumpTo\(\)/);
+
+      handle.boot();
+      handle.map.loadStyle();
+
+      assert.deepEqual(handle.map.callsTo("jumpTo"), []);
+    } finally {
+      mock.timers.reset();
+    }
   });
 });
 

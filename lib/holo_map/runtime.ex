@@ -43,8 +43,10 @@ defmodule HoloMap.Runtime do
   @doc """
   Calls `method` on the underlying `maplibregl.Map` with `args`.
 
-  Calls made before the style finishes loading are queued and replayed on
-  `load`, so a camera move issued from a mount action is not lost.
+  Calls made before the map has booted, or before its style finishes loading,
+  are queued and replayed in order once it has, so a camera move issued from a
+  mount action is not lost. Calls for a map that has not booted within five
+  seconds are dropped with a console warning.
 
   This is the general escape hatch. Prefer the named wrappers in `HoloMap.API`,
   which document their arguments and normalise option keys; reach for this only

@@ -61,9 +61,10 @@ const live = [];
 
 const DEFAULT_SPEC = { style: "https://tiles.test/style.json" };
 
-// Renders a map's container and definitions, boots it, and returns a handle
-// for driving it. `defs` lists child definitions in template order.
-export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
+// Renders a map's container and definitions, boots it unless `boot` is false,
+// and returns a handle for driving it. `defs` lists child definitions in
+// template order.
+export function mountMap({ spec = DEFAULT_SPEC, events, defs = [], boot = true } = {}) {
   mounted += 1;
   const cid = `map${mounted}`;
 
@@ -80,7 +81,9 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
   wrapper.appendChild(holder);
   document.body.appendChild(wrapper);
 
-  runtime.boot(cid);
+  if (boot) {
+    runtime.boot(cid);
+  }
 
   // The definition element for `key`. Definitions of different kinds can
   // share a key, as a source and its layer often do, so `kind` picks one.
@@ -95,7 +98,11 @@ export function mountMap({ spec = DEFAULT_SPEC, events, defs = [] } = {}) {
     cid,
     container,
     wrapper,
-    map: maplibre.maps[maplibre.maps.length - 1],
+    // The MapLibre map built on this container, once the map has booted.
+    get map() {
+      return maplibre.maps.findLast((map) => map.options.container === container);
+    },
+    boot: () => runtime.boot(cid),
     def,
     // Appends a definition, or renders it just before the one keyed `before`.
     add: (spec, before) =>
