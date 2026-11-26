@@ -70,6 +70,7 @@ class FakeMap extends Evented {
     // Registered images by name. MapLibre keeps them on the style object, so
     // a style that setStyle rebuilds starts without them.
     this.images = new Map();
+    this.heldImages = null;
     this.terrain = null;
     // The style given to the constructor is still on its way.
     this.styleLoaded = false;
@@ -431,10 +432,21 @@ class FakeMap extends Evented {
   // --- images --------------------------------------------------------------
 
   // Resolves the way MapLibre's image request does, with the image under
-  // `data`. Nothing is fetched: the image stands in as its URL.
+  // `data`. Nothing is fetched: the image stands in as its URL. Once a test
+  // sets `heldImages` to an array, each request waits there for its
+  // `finish()`, so responses can arrive in any order, as they do over a
+  // network.
   loadImage(url) {
     this.record("loadImage", url);
-    return Promise.resolve({ data: { url } });
+    const response = { data: { url } };
+
+    if (!this.heldImages) {
+      return Promise.resolve(response);
+    }
+
+    return new Promise((resolve) => {
+      this.heldImages.push({ url, finish: () => resolve(response) });
+    });
   }
 
   hasImage(id) {
@@ -451,6 +463,24 @@ class FakeMap extends Evented {
     }
 
     this.images.set(id, { image, options });
+  }
+
+  // Replaces the pixels of a registered image, keeping its options. MapLibre
+  // also refuses an image of another size, which these stand-ins do not have.
+  updateImage(id, image) {
+    this.record("updateImage", id, image);
+
+    if (!this.images.has(id)) {
+      this.reportError(
+        new Error(
+          "The map has no image with that id. If you are adding a new image use " +
+            "`map.addImage(...)` instead.",
+        ),
+      );
+      return;
+    }
+
+    this.images.get(id).image = image;
   }
 
   removeImage(id) {

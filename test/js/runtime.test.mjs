@@ -825,6 +825,57 @@ describe("terrain and its source", () => {
   });
 });
 
+// An image loads asynchronously, and its responses can come back in any order.
+describe("image loads", () => {
+  const icon = (name) => `https://tiles.test/${name}.png`;
+
+  // A map whose image requests wait for the test to finish them.
+  function mapWithImage(url) {
+    const handle = mountMap({ defs: [{ kind: "image", key: "pin", spec: { url } }] });
+    handle.map.heldImages = [];
+    handle.map.loadStyle();
+    return handle;
+  }
+
+  test("keeps the image of the URL requested last, whatever order the loads finish in", async () => {
+    const handle = mapWithImage(icon("a"));
+
+    handle.setSpec("pin", { url: icon("b") }, "image");
+    await settle();
+    handle.setSpec("pin", { url: icon("c") }, "image");
+    await settle();
+
+    const [a, b, c] = handle.map.heldImages;
+    a.finish();
+    await settle();
+    c.finish();
+    await settle();
+    b.finish();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("c") });
+  });
+
+  test("does not register an image whose definition was removed while it loaded", async () => {
+    const handle = mapWithImage(icon("a"));
+
+    handle.remove("pin", "image");
+    await settle();
+    handle.map.heldImages[0].finish();
+    await settle();
+
+    assert.equal(handle.map.hasImage("pin"), false);
+
+    // Rendered again, it loads for its new definition alone.
+    handle.add({ kind: "image", key: "pin", spec: { url: icon("b") } });
+    await settle();
+    handle.map.heldImages[1].finish();
+    await settle();
+
+    assert.deepEqual(handle.map.images.get("pin").image, { url: icon("b") });
+  });
+});
+
 // Layers stack in template order, `before_id` aside, and controls stack in a
 // corner in declared order, however late each one reaches the map.
 describe("order", () => {

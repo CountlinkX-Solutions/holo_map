@@ -98,6 +98,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now also has an `error` map with the `message`, plus the HTTP `status` and
   `url` of a failed request and the `source_id` of a source's error when
   MapLibre reports them. Only plain values cross into Elixir.
+- `HoloMap.Image` applied whichever image load finished last: a slow response
+  for an earlier `url` replaced the image of a later one, and a response for an
+  image removed while it loaded registered it again, with no component left to
+  remove it. A load is now applied only if it is the latest one for an image
+  that is still declared.
 
 ## [0.1.0] - 2026-08-23
 
