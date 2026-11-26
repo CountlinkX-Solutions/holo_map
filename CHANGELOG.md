@@ -158,6 +158,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `on_close` fire, and the MapLibre GL JS release that introduced the globe
   control (5.0.0, not 6).
 
+### Security
+
+- Locked dependencies with published advisories were refreshed: Phoenix
+  1.8.17, Plug 1.20.4 and Plug.Crypto 2.2.1 in the library's lockfile, and the
+  same plus Bandit 1.15.0 and `source-map-js` in the demo's. No version
+  requirement changed, so applications resolve their own versions as before.
+
 ## [0.1.0] - 2026-08-23
 
 ### Added
