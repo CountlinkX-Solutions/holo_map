@@ -12,6 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stopped firing once a change to the slot content, `color`, `scale` or
   `class_name` replaced the MapLibre marker. The listeners are now bound to the
   new marker and taken off the old one.
+- `HoloMap.Popup`'s `on_open` never fired: MapLibre emits `open` while the popup
+  is being added, and the listener was attached afterwards. It now fires when
+  the popup first renders and when a changed declaration reopens a popup
+  MapLibre had closed.
 
 ## [0.1.0] - 2026-08-23
 

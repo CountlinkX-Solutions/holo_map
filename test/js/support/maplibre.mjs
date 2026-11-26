@@ -385,9 +385,16 @@ export class Popup extends Evented {
     return this;
   }
 
+  // MapLibre fires `open` at the very end of addTo, synchronously, so a
+  // listener attached once addTo has returned never hears it.
   addTo(map) {
+    if (this.map) {
+      this.remove();
+    }
+
     this.map = map;
     map.popups.add(this);
+    this.fire("open");
     return this;
   }
 
@@ -395,12 +402,14 @@ export class Popup extends Evented {
     return this.map !== null;
   }
 
+  // `close` fires only when the popup was on a map.
   remove() {
     if (this.map) {
       this.map.popups.delete(this);
+      this.map = null;
+      this.fire("close");
     }
 
-    this.map = null;
     return this;
   }
 }

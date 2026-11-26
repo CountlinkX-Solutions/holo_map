@@ -641,6 +641,53 @@ describe("events", () => {
       assert.equal(markerListeners(before), 0, "listeners left on the discarded marker");
     });
   });
+
+  const INFO = {
+    kind: "popup",
+    key: "info",
+    spec: { lngLat: [0, 0], html: "<p>One</p>" },
+    events: {
+      open: { action: "shown", target: "page" },
+      close: { action: "closed", target: "page" },
+    },
+  };
+
+  test("dispatches on_open when a popup first renders and when a change reopens it", async () => {
+    const handle = mountMap({ defs: [INFO] });
+    const [popup] = handle.map.popups;
+
+    assert.deepEqual(dispatched, [["shown", "page", {}]]);
+
+    // The close button, a map click or a camera move.
+    popup.remove();
+    handle.setSpec("info", { lngLat: [1, 1], html: "<p>Two</p>" });
+    await settle();
+
+    assert.deepEqual(
+      dispatched.map(([action]) => action),
+      ["shown", "closed", "shown"],
+    );
+  });
+
+  test("dispatches on_close when MapLibre closes a popup, not when it stops being rendered", async () => {
+    const handle = mountMap({ defs: [INFO] });
+    const [popup] = handle.map.popups;
+    dispatched.length = 0;
+
+    popup.remove();
+    assert.deepEqual(dispatched, [["closed", "page", {}]]);
+
+    dispatched.length = 0;
+    handle.setSpec("info", { lngLat: [1, 1], html: "<p>Two</p>" });
+    await settle();
+    dispatched.length = 0;
+
+    handle.remove("info");
+    await settle();
+
+    assert.equal(handle.map.popups.size, 0);
+    assert.deepEqual(dispatched, []);
+  });
 });
 
 describe("teardown", () => {
