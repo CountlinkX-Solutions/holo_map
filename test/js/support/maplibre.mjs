@@ -629,6 +629,11 @@ export class Marker extends Evented {
     // MapLibre lifts its default pin so that the tip, not the middle, is on
     // the coordinate. An element of the marker's own is not moved.
     this.offset = options.offset || (options.element ? [0, 0] : [0, -14]);
+
+    // The classes MapLibre adds to the element: `className` split on single
+    // spaces, so two spaces in a row reach classList as an empty name.
+    const names = options.className ? options.className.split(" ") : [];
+    this.classes = new Set(names.map(classToken));
   }
 
   setLngLat(lngLat) {

@@ -118,6 +118,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its offset to `[0, 0]`, which moved the tip of the pin off its coordinate.
   It now goes back to MapLibre's own offset for the pin, `[0, -14]`; a marker
   with slot content still goes back to `[0, 0]`.
+- A `class_name` with a leading, trailing or repeated space kept a
+  `HoloMap.Marker` or `HoloMap.Popup` off the map, and a `popup_options` one
+  kept the marker's popup from opening: MapLibre splits it on single spaces and
+  the browser refuses the empty class name between two of them. The names now
+  reach MapLibre separated by single spaces.
 
 ## [0.1.0] - 2026-08-23
 

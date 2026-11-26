@@ -297,6 +297,34 @@ describe("add", () => {
     assert.deepEqual(popup.options, { maxWidth: "240px" });
   });
 
+  // MapLibre splits a class name on single spaces and hands every piece to
+  // classList.add, which throws for an empty one.
+  test("builds markers and popups whose class_name has spaces around or between names", async () => {
+    const className = "  depot   busy ";
+    const popup = { html: "<p>Depot</p>", options: { className } };
+    const { map } = mountMap({
+      defs: [
+        { kind: "marker", key: "pin", spec: { lngLat: [0, 0], className, popup } },
+        { kind: "marker", key: "badge", spec: { lngLat: [1, 1], className }, content: "<b>3</b>" },
+        { kind: "popup", key: "info", spec: { lngLat: [2, 2], html: "<p>Hi</p>", className } },
+      ],
+    });
+
+    assert.equal(map.markers.size, 2);
+
+    const [pin, badge] = map.markers;
+    const [info] = map.popups;
+
+    assert.deepEqual([...pin.classes], ["depot", "busy"]);
+    assert.deepEqual([...badge.classes], ["depot", "busy"]);
+    assert.equal(badge.getElement().className, "holo-map-marker depot busy");
+    assert.deepEqual([...info.classes], ["depot", "busy"]);
+
+    // The marker's own popup, from popup_options, opens on a click.
+    await userClick(pin.getElement());
+    assert.deepEqual([...pin.getPopup().classes], ["depot", "busy"]);
+  });
+
   test("applies a definition that appears after the style loaded straight away", async () => {
     const handle = loadedCitiesMap();
     const regions = { type: "geojson", data: POINTS };
