@@ -26,6 +26,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `close_button`, `close_on_click`, `close_on_move` and `focus_after_open`. A
   popup replaced this way reports neither `on_close` nor `on_open`, and a
   marker's popup that was open stays open when its options change.
+- `HoloMap.Marker`'s `popup_options` reached MapLibre with its keys untouched,
+  so the documented `HoloMap.Popup` vocabulary (`close_button`, `max_width` and
+  the rest) was ignored. Those keys are now converted, with the same boolean
+  coercion `HoloMap.Popup` applies; string keys still pass through unchanged.
 
 ## [0.1.0] - 2026-08-23
 
