@@ -63,10 +63,11 @@ const DEFAULT_SPEC = { style: "https://tiles.test/style.json" };
 
 // Renders a map's container and definitions, boots it unless `boot` is false,
 // and returns a handle for driving it. `defs` lists child definitions in
-// template order.
-export function mountMap({ spec = DEFAULT_SPEC, events, defs = [], boot = true } = {}) {
+// template order. Each map gets a cid of its own, unless `cid` names one, as
+// a page rendering a map again does.
+export function mountMap({ cid, spec = DEFAULT_SPEC, events, defs = [], boot = true } = {}) {
   mounted += 1;
-  const cid = `map${mounted}`;
+  cid = cid || `map${mounted}`;
 
   const container = document.createElement("div");
   container.id = `hm--${cid}`;

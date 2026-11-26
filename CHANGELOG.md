@@ -147,6 +147,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the component's back, and a `before_id` moved the style's layer. Until the
   style changes again, such a component now leaves the style's source or layer
   alone.
+- Since calls made before a map boots are queued, a `HoloMap.API` call for a
+  map torn down with `HoloMap.Runtime.destroy/1` waited five seconds before it
+  was dropped with a warning. It is now dropped at once, with a warning naming
+  the destroyed map. Calls are queued again once the map boots again, or once a
+  page has moved its container away, so a page that renders the map again still
+  hands it the calls made before its boot.
 
 ## [0.1.0] - 2026-08-23
 

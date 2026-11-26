@@ -49,7 +49,9 @@ end
 Calls made before the map has booted, or before its style finishes loading, are
 queued and replayed in order, so an action scheduled from `init` is not lost,
 even when it runs before the map's own boot action. Calls for a map that has not
-booted within five seconds are dropped with a console warning.
+booted within five seconds are dropped with a console warning. A call for a map
+torn down with `HoloMap.Runtime.destroy/1` while its container stays on the page
+is dropped at once, with a warning, until the map boots again.
 
 ## Camera
 

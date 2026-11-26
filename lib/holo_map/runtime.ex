@@ -87,7 +87,8 @@ defmodule HoloMap.Runtime do
 
   Normally unnecessary: the runtime observes its own container and disposes the
   map when Hologram removes it from the page. Use this when a map should stop
-  consuming a context while its container stays mounted.
+  consuming a context while its container stays mounted. Calls made for the map
+  afterwards are dropped with a console warning until it boots again.
   """
   @spec destroy(String.t()) :: :ok
   def destroy(cid) do

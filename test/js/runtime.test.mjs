@@ -1974,4 +1974,69 @@ describe("teardown", () => {
     assert.ok(handle.map.removed);
     assert.equal(runtime.instance(handle.cid), null);
   });
+
+  // destroy/1 is for a map whose container stays on the page, so nothing is
+  // going to boot for a call made after it.
+  test("warns at once about a call for a destroyed map, and keeps nothing", () => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+
+    try {
+      const handle = mountMap();
+      runtime.destroy(handle.cid);
+
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+
+      assert.equal(logged.warnings.length, 1);
+      assert.match(logged.warnings[0], new RegExp(`"${handle.cid}" was destroyed`));
+      assert.match(logged.warnings[0], /jumpTo\(\)/);
+
+      // No later warning, and the map booted again does not get the call,
+      // only the ones made for it.
+      mock.timers.tick(5000);
+      handle.boot();
+      runtime.invoke(handle.cid, "jumpTo", [{ zoom: 6 }]);
+      handle.map.loadStyle();
+
+      assert.equal(logged.warnings.length, 1);
+      assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 6 }, {}]]);
+    } finally {
+      mock.timers.reset();
+    }
+  });
+
+  // A page that renders the map again runs its own `init` action before the
+  // map's boot, as on the first visit.
+  test("holds the calls for a map rendered again under the cid of a destroyed one", async () => {
+    const first = mountMap();
+    runtime.destroy(first.cid);
+    first.wrapper.remove();
+    await settle();
+
+    const again = mountMap({ cid: first.cid, boot: false });
+    runtime.invoke(again.cid, "jumpTo", [{ zoom: 4 }]);
+    again.boot();
+    again.map.loadStyle();
+
+    assert.deepEqual(again.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  // Hologram patches elements in place, so the next page can turn the same
+  // element into something else and a later one turn it back into the map's.
+  test("holds the calls for a destroyed map whose container a page patched away and back", async () => {
+    const handle = mountMap();
+    runtime.destroy(handle.cid);
+
+    handle.container.id = "page-header";
+    handle.wrapper.appendChild(document.createElement("p"));
+    await settle();
+
+    handle.container.id = `hm--${handle.cid}`;
+    runtime.invoke(handle.cid, "jumpTo", [{ zoom: 4 }]);
+    handle.boot();
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.callsTo("jumpTo"), [[{ zoom: 4 }, {}]]);
+    assert.deepEqual(logged.warnings, []);
+  });
 });
