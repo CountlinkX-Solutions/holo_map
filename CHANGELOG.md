@@ -78,6 +78,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   longer added to the style's source, where a vector source refused each one
   with an error; the warning now names them. A style change also no longer
   warns that the new style defines each of the map's own layers.
+- Terrain stayed bound to its `HoloMap.Source.RasterDEM` after a change to the
+  source's `tiles`, `url`, `encoding` or other structural keys rebuilt it, and
+  after the source was removed, so it went on drawing from a source that was no
+  longer on the map. It now comes off before the source and goes back on the
+  rebuilt one, whether `HoloMap.Terrain` or the terrain control turned it on.
+  Removing the source turns terrain off with a warning until the source is
+  rendered again. `HoloMap.Terrain` declared above its source, or rendered
+  while the source was not, made MapLibre throw "cannot load terrain" and was
+  never applied; it now waits for its source, as layers do.
 
 ## [0.1.0] - 2026-08-23
 

@@ -401,9 +401,31 @@ class FakeMap extends Evented {
     this.checkLoaded();
   }
 
+  // MapLibre's terrain holds on to the source object it was given, so it
+  // goes on using that one if the source is removed or replaced. A source id
+  // the style does not hold is thrown, not reported.
   setTerrain(terrain) {
     this.record("setTerrain", terrain);
     this.checkLoaded();
+
+    if (!terrain) {
+      this.terrain = null;
+      return;
+    }
+
+    const source = this.sources.get(terrain.source);
+
+    if (!source) {
+      throw new Error(
+        `cannot load terrain, because there exists no source with ID: ${terrain.source}`,
+      );
+    }
+
+    this.terrain = { options: terrain, source };
+  }
+
+  getTerrain() {
+    return this.terrain ? this.terrain.options : null;
   }
 
   // --- images --------------------------------------------------------------

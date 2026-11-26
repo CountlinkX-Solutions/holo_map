@@ -654,6 +654,127 @@ describe("layers waiting for their source", () => {
   });
 });
 
+// MapLibre's terrain draws from the source object it was given and throws for
+// a source it does not hold. Terrain follows its DEM source instead.
+describe("terrain and its source", () => {
+  const DEM = {
+    kind: "source",
+    key: "dem",
+    spec: { type: "raster-dem", tiles: ["https://dem.test/a/{z}/{x}/{y}.png"] },
+  };
+
+  const TERRAIN = { kind: "terrain", key: "terrain", spec: { source: "dem", exaggeration: 1.4 } };
+
+  // Whether the map's terrain draws from the source the map now holds.
+  function attached(map) {
+    return Boolean(map.terrain) && map.terrain.source === map.getSource("dem");
+  }
+
+  test("keeps terrain on its DEM source when a structural change rebuilds the source", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    const tiles = ["https://dem.test/b/{z}/{x}/{y}.png"];
+    handle.setSpec("dem", { ...DEM.spec, tiles }, "source");
+    await settle();
+
+    assert.deepEqual(handle.map.getSource("dem").spec.tiles, tiles);
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("keeps terrain turned on by the terrain control through a rebuild too", async () => {
+    const handle = mountMap({ defs: [DEM] });
+    handle.map.loadStyle();
+    // What MapLibre's TerrainControl does when the user turns terrain on.
+    handle.map.setTerrain({ source: "dem" });
+
+    handle.setSpec("dem", { ...DEM.spec, encoding: "terrarium" }, "source");
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), { source: "dem" });
+    assert.ok(attached(handle.map));
+  });
+
+  test("turns terrain off with a warning while its source is gone, and back on with it", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    handle.remove("dem", "source");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+    assert.equal(logged.warnings.length, 1);
+    assert.match(logged.warnings[0], /terrain/);
+    assert.match(logged.warnings[0], /"dem"/);
+
+    handle.add(DEM);
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("takes terrain and its source off together without a warning", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    handle.remove("dem", "source");
+    handle.remove("terrain", "terrain");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+    assert.equal(handle.map.getSource("dem"), undefined);
+    assert.deepEqual(logged.warnings, []);
+  });
+
+  test("applies terrain written above its DEM source once the source is added", async () => {
+    const handle = mountMap({ defs: [TERRAIN, DEM] });
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+
+    // And again on every new style, in the same order.
+    handle.setSpec("map", { style: "https://tiles.test/dark.json" });
+    await settle();
+    handle.map.loadStyle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("applies terrain rendered without its DEM source once the source is rendered", async () => {
+    const handle = mountMap({ defs: [TERRAIN] });
+    handle.map.loadStyle();
+
+    assert.equal(handle.map.getTerrain(), null);
+
+    handle.add(DEM);
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), TERRAIN.spec);
+    assert.ok(attached(handle.map));
+  });
+
+  test("turns terrain off while it names a source that is not rendered", async () => {
+    const handle = mountMap({ defs: [DEM, TERRAIN] });
+    handle.map.loadStyle();
+
+    const other = { source: "dem-2", exaggeration: 1.4 };
+    handle.setSpec("terrain", other, "terrain");
+    await settle();
+
+    assert.equal(handle.map.getTerrain(), null);
+
+    handle.add({ ...DEM, key: "dem-2" });
+    await settle();
+
+    assert.deepEqual(handle.map.getTerrain(), other);
+    assert.equal(handle.map.terrain.source, handle.map.getSource("dem-2"));
+  });
+});
+
 // Layers stack in template order, `before_id` aside, and controls stack in a
 // corner in declared order, however late each one reaches the map.
 describe("order", () => {
